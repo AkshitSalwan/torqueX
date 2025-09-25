@@ -1,0 +1,169 @@
+<%- include('../partials/header') %>
+
+<div class="container mx-auto px-4 py-12">
+  <h1 class="text-4xl font-bold text-center mb-8">Browse Our Vehicles</h1>
+  
+  <div class="flex flex-col lg:flex-row gap-8">
+    <!-- Filters Sidebar -->
+    <div class="w-full lg:w-1/4">
+      <div class="bg-white rounded-lg shadow-md p-6 sticky top-24">
+        <h2 class="text-xl font-bold mb-4">Filters</h2>
+        
+        <form id="filter-form" method="GET" action="/vehicles" class="space-y-6">
+          <!-- Vehicle Type Filter -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Vehicle Type</label>
+            <div class="space-y-2">
+              <% types.forEach(type => { %>
+                <div class="flex items-center">
+                  <input 
+                    type="radio" 
+                    id="type-<%= type.toLowerCase() %>" 
+                    name="type" 
+                    value="<%= type %>" 
+                    class="h-4 w-4 text-blue-600"
+                    <%= filters.type === type ? 'checked' : '' %>
+                  >
+                  <label for="type-<%= type.toLowerCase() %>" class="ml-2 text-sm text-gray-700"><%= type %></label>
+                </div>
+              <% }) %>
+              <div class="flex items-center">
+                <input 
+                  type="radio" 
+                  id="type-all" 
+                  name="type" 
+                  value="" 
+                  class="h-4 w-4 text-blue-600"
+                  <%= !filters.type ? 'checked' : '' %>
+                >
+                <label for="type-all" class="ml-2 text-sm text-gray-700">All Types</label>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Price Range Filter -->
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Price Range (per day)</label>
+            <div class="flex items-center space-x-2">
+              <div class="w-1/2">
+                <label for="minPrice" class="sr-only">Min Price</label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="text-gray-500">$</span>
+                  </div>
+                  <input 
+                    type="number" 
+                    id="minPrice" 
+                    name="minPrice" 
+                    placeholder="Min" 
+                    class="pl-7 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    value="<%= filters.minPrice || '' %>"
+                    min="0"
+                  >
+                </div>
+              </div>
+              <span class="text-gray-500">-</span>
+              <div class="w-1/2">
+                <label for="maxPrice" class="sr-only">Max Price</label>
+                <div class="relative">
+                  <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="text-gray-500">$</span>
+                  </div>
+                  <input 
+                    type="number" 
+                    id="maxPrice" 
+                    name="maxPrice" 
+                    placeholder="Max" 
+                    class="pl-7 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                    value="<%= filters.maxPrice || '' %>"
+                    min="0"
+                  >
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Availability Filter -->
+          <div>
+            <div class="flex items-center">
+              <input 
+                type="checkbox" 
+                id="available" 
+                name="available" 
+                value="true" 
+                class="h-4 w-4 text-blue-600 rounded"
+                <%= filters.available === 'true' ? 'checked' : '' %>
+              >
+              <label for="available" class="ml-2 text-sm text-gray-700">Show Available Only</label>
+            </div>
+          </div>
+          
+          <!-- Apply Filters Button -->
+          <div>
+            <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300">
+              Apply Filters
+            </button>
+          </div>
+          
+          <!-- Reset Filters Link -->
+          <div class="text-center">
+            <a href="/vehicles" class="text-sm text-blue-600 hover:underline">Reset Filters</a>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <!-- Vehicles Grid -->
+    <div class="w-full lg:w-3/4">
+      <% if (vehicles.length === 0) { %>
+        <div class="bg-white rounded-lg shadow-md p-8 text-center">
+          <h2 class="text-2xl font-bold mb-4">No Vehicles Found</h2>
+          <p class="text-gray-700 mb-6">We couldn't find any vehicles that match your search criteria.</p>
+          <a href="/vehicles" class="inline-block bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+            View All Vehicles
+          </a>
+        </div>
+      <% } else { %>
+        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+          <% vehicles.forEach(vehicle => { %>
+            <div class="bg-white rounded-lg shadow-md overflow-hidden">
+              <div class="h-48 overflow-hidden">
+                <img 
+                  src="<%= vehicle.imageUrl %>" 
+                  alt="<%= vehicle.name %>" 
+                  class="w-full h-full object-cover"
+                  onerror="this.src='/images/placeholder-car.jpg'; this.onerror=null;"
+                >
+              </div>
+              <div class="p-6">
+                <div class="flex justify-between items-start mb-2">
+                  <h3 class="text-xl font-bold"><%= vehicle.name %></h3>
+                  <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+                    <%= vehicle.type %>
+                  </span>
+                </div>
+                <p class="text-gray-600 mb-4"><%= vehicle.specs && vehicle.specs.make ? `${vehicle.specs.make} ${vehicle.specs.model} - ${vehicle.specs.year}` : 'No description available' %></p>
+                <div class="flex justify-between items-center">
+                  <span class="text-2xl font-bold text-blue-600">$<%= vehicle.pricePerDay %>/day</span>
+                  <a 
+                    href="/vehicles/<%= vehicle.id %>" 
+                    class="inline-block bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300"
+                  >
+                    View Details
+                  </a>
+                </div>
+                <% if (!vehicle.availability) { %>
+                  <div class="mt-4 px-3 py-1 bg-red-100 text-red-800 text-sm font-medium rounded-full inline-block">
+                    Currently Unavailable
+                  </div>
+                <% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

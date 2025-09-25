@@ -1,0 +1,124 @@
+<%- include('../partials/header') %>
+
+<div class="container mx-auto px-4 py-12">
+  <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
+    <h1 class="text-3xl font-bold text-center mb-8">Login to TorqueX</h1>
+    
+    <div class="mb-6">
+      <!-- Regular Login Form as Fallback -->
+      <form action="/auth/callback" method="POST" class="space-y-6">
+        <div>
+          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+          <input 
+            type="email" 
+            id="email" 
+            name="email" 
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            required
+          >
+        </div>
+        
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+          <input 
+            type="password" 
+            id="password" 
+            name="password" 
+            class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            required
+          >
+        </div>
+        
+        <div>
+          <button type="submit" class="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 transition duration-300">
+            Sign In
+          </button>
+        </div>
+      </form>
+      
+      <div id="clerk-auth-container" class="w-full mt-8">
+        <div class="bg-gray-100 p-4 rounded-md text-center">
+          <p>Loading authentication service...</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="text-center">
+      <p class="text-gray-600">Don't have an account? <a href="/auth/signup" class="text-blue-600 hover:underline">Sign up</a></p>
+    </div>
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const formElement = document.querySelector('form');
+    const clerkContainer = document.getElementById('clerk-auth-container');
+    
+    // First hide the Clerk container, show fallback form initially
+    clerkContainer.style.display = 'none';
+    formElement.style.display = 'block';
+    
+    // Function to mount Clerk safely
+    function mountClerk() {
+      if (typeof window.Clerk === 'undefined') {
+        console.warn('Clerk still not available');
+        return false;
+      }
+      
+      try {
+        // Check if Clerk is ready
+        if (!window.Clerk.__loaded) {
+          console.log('Clerk loaded but not yet fully initialized');
+          return false;
+        }
+        
+        console.log('Clerk is fully initialized, mounting sign-in component');
+        
+        // Hide the fallback form
+        formElement.style.display = 'none';
+        
+        // Show and mount Clerk component
+        clerkContainer.style.display = 'block';
+        
+        // Use a try-catch to handle potential errors
+        try {
+          window.Clerk.mountSignIn(clerkContainer, {
+            signInUrl: '/auth/login',
+            afterSignInUrl: '/auth/callback',
+            redirectUrl: '/auth/callback',
+          });
+          return true;
+        } catch (error) {
+          console.error('Error mounting Clerk:', error);
+          return false;
+        }
+      } catch (error) {
+        console.error('Error accessing Clerk:', error);
+        return false;
+      }
+    }
+    
+    // Listen for the clerkLoaded custom event
+    document.addEventListener('clerkLoaded', function() {
+      // Wait for Clerk to be fully initialized
+      const checkInterval = setInterval(function() {
+        if (mountClerk()) {
+          clearInterval(checkInterval);
+        }
+      }, 200);
+      
+      // Set a timeout to stop trying after 5 seconds
+      setTimeout(function() {
+        clearInterval(checkInterval);
+        console.warn('Timed out waiting for Clerk to initialize, using fallback form');
+      }, 5000);
+    });
+    
+    // Also try after a delay as a backup
+    setTimeout(function() {
+      mountClerk();
+    }, 2000);
+  });
+</script>
+
+<%- include('../partials/footer') %>

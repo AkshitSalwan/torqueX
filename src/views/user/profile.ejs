@@ -1,0 +1,125 @@
+<%- include('../partials/header') %>
+
+<div class="container mx-auto px-4 py-12">
+  <h1 class="text-3xl font-bold mb-8">My Profile</h1>
+  
+  <div class="flex flex-col lg:flex-row gap-8">
+    <!-- Sidebar -->
+    <div class="w-full lg:w-1/4">
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center mb-4">
+          <div class="h-16 w-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-bold">
+            <%= user.name.charAt(0).toUpperCase() %>
+          </div>
+          <div class="ml-4">
+            <h2 class="text-xl font-bold"><%= user.name %></h2>
+            <p class="text-gray-600"><%= user.email %></p>
+          </div>
+        </div>
+        <div class="border-t border-gray-200 pt-4">
+          <p class="text-gray-600">Member since: <%= new Date(user.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) %></p>
+        </div>
+      </div>
+      
+      <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <nav class="divide-y divide-gray-200">
+          <a href="/user/dashboard" class="block px-6 py-4 hover:bg-gray-50 font-medium">
+            Dashboard
+          </a>
+          <a href="/user/bookings" class="block px-6 py-4 hover:bg-gray-50 font-medium">
+            My Bookings
+          </a>
+          <a href="/user/broadcasts" class="block px-6 py-4 hover:bg-gray-50 font-medium">
+            Announcements
+          </a>
+          <a href="/user/reviews" class="block px-6 py-4 hover:bg-gray-50 font-medium">
+            My Reviews
+          </a>
+          <a href="/user/profile" class="block px-6 py-4 bg-blue-50 border-l-4 border-blue-600 font-medium">
+            Profile Settings
+          </a>
+        </nav>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="w-full lg:w-3/4">
+      <% if (successMessage) { %>
+        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6 rounded">
+          <p><%= successMessage %></p>
+        </div>
+      <% } %>
+      
+      <div class="bg-white rounded-lg shadow-md p-6">
+        <h2 class="text-xl font-bold mb-6">Profile Information</h2>
+        
+        <form action="/user/profile" method="POST" class="space-y-6">
+          <div>
+            <label for="name" class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+            <input 
+              type="text" 
+              id="name" 
+              name="name" 
+              value="<%= user.name %>" 
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+              required
+            >
+          </div>
+          
+          <div>
+            <label for="email" class="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+            <input 
+              type="email" 
+              id="email" 
+              value="<%= user.email %>" 
+              class="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-100 cursor-not-allowed"
+              disabled
+            >
+            <p class="mt-1 text-sm text-gray-500">Email cannot be changed. This is managed by your login provider.</p>
+          </div>
+          
+          <div>
+            <label for="phone" class="block text-sm font-medium text-gray-700 mb-1">Phone Number</label>
+            <input 
+              type="tel" 
+              id="phone" 
+              name="phone" 
+              value="<%= user.phone || '' %>" 
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            >
+          </div>
+          
+          <div>
+            <label for="address" class="block text-sm font-medium text-gray-700 mb-1">Address</label>
+            <textarea 
+              id="address" 
+              name="address" 
+              rows="3" 
+              class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+            ><%= user.address || '' %></textarea>
+          </div>
+          
+          <div>
+            <button type="submit" class="inline-block bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+              Save Changes
+            </button>
+          </div>
+        </form>
+      </div>
+      
+      <div class="bg-white rounded-lg shadow-md p-6 mt-8">
+        <h2 class="text-xl font-bold mb-6">Account Security</h2>
+        
+        <p class="text-gray-600 mb-4">
+          Your account is managed by our secure authentication provider. To change your password or update security settings, please use the options provided by the authentication service.
+        </p>
+        
+        <a href="/auth/logout" class="inline-block bg-red-600 text-white py-2 px-6 rounded-lg hover:bg-red-700 transition duration-300 mt-4">
+          Sign Out
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

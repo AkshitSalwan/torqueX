@@ -1,125 +1,133 @@
-# torqueX
-Task:
-Build a full-stack professional car & vehicle renting web app named TorqueX using the following tech stack and requirements.
+# TorqueX - Car Rental Application
 
-📦 Tech Stack
+A full-stack car rental application built with Node.js, Express.js, EJS templates, Tailwind CSS, PostgreSQL (via Prisma ORM), and Clerk for authentication.
 
-Backend: Node.js + Express.js
+## Features
 
-Frontend: EJS templates with Tailwind CSS
+- **Authentication & Authorization**: Secure login/signup with Clerk and role-based access (admin, user)
+- **Vehicle Listings**: Browse vehicles with filters for type, price, and availability
+- **Booking System**: Book vehicles for specific dates with automatic price calculation
+- **User Dashboard**: View bookings, leave reviews, and manage profile
+- **Admin Dashboard**: Manage vehicles, bookings, and send broadcasts to users
+- **Real-time Notifications**: Socket.io integration for admin broadcasts
+- **Reviews & Ratings**: Users can rate and review vehicles after rental completion
 
-Database: PostgreSQL (via Prisma ORM)
+## Tech Stack
 
-Authentication: Clerk (email/password & social login)
+- **Backend**: Node.js, Express.js
+- **Frontend**: EJS templates, Tailwind CSS
+- **Database**: PostgreSQL with Prisma ORM
+- **Authentication**: Clerk
+- **Real-time Communication**: Socket.io
+- **Payments**: Stripe (integration ready)
 
-Real-Time: Socket.io (WebSockets) for admin-to-user broadcasts
+## Setup Instructions
 
-🏗️ Project Overview
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/torqueX.git
+   cd torqueX
+   ```
 
-Create a production-ready web app for renting cars and vehicles with two main user roles:
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-Admin – Manage vehicles, bookings, reviews, deals, and broadcast daily offers.
+3. **Set up environment variables**
+   - Copy the `.env.example` file to `.env`
+   - Update the variables with your own values:
+     - Database connection string
+     - Clerk API keys (get from [clerk.com](https://clerk.com))
+     - Stripe keys (if implementing payments)
 
-User – Browse vehicles, book rentals, view history, receive admin broadcasts, and leave reviews after returning a vehicle.
+4. **Set up the database**
+   ```bash
+   npx prisma migrate dev
+   ```
 
-🔑 Core Features
+5. **Start the application**
+   ```bash
+   # Development mode with auto-reload
+   npm run dev
+   
+   # Production mode
+   npm start
+   ```
 
-✅ Authentication & Authorization
+6. **Create test users and admin accounts**
+   ```bash
+   # Create admin user
+   npm run create:admin
+   
+   # Create test users (includes admin and regular user accounts)
+   npm run create:test-users
+   
+   # Or create all accounts at once
+   npm run setup:demo
+   ```
+   
+7. **Build CSS (in a separate terminal)**
+   ```bash
+   npm run build:css
+   ```
 
-Integrate Clerk Auth for secure login/signup with role-based access (admin, user).
+8. **Access the application**
+   - Open your browser and go to `http://localhost:3000`
+   - Use the credentials in `CREDENTIALS.md` to log in
 
-Use Clerk middleware to protect routes and manage sessions inside Express.
+## Clerk Authentication Setup
 
-✅ Vehicle Listings
+1. Create an account at [clerk.com](https://clerk.com)
+2. Create a new application
+3. Configure your application settings:
+   - Enable Email/Password authentication
+   - Set up social providers (optional)
+   - Configure the redirect URLs:
+     - Sign-in redirect: `/auth/callback`
+     - Sign-up redirect: `/auth/callback`
+4. Copy your API keys to your `.env` file:
+   ```
+   CLERK_PUBLISHABLE_KEY=your_publishable_key
+   CLERK_SECRET_KEY=your_secret_key
+   ```
 
-Display all available vehicles with filters for type, location, price, and availability.
+## Database Schema
 
-Individual vehicle pages with specs, rental price/day, and customer reviews.
+The application uses PostgreSQL with Prisma ORM. Key models include:
 
-✅ Booking System
+- **User**: User accounts with role-based access
+- **Vehicle**: Car/vehicle listings with details and availability
+- **Booking**: Rental reservations with dates and status
+- **Review**: User reviews for vehicles after rental
+- **Deal**: Special offers and discounts
+- **Broadcast**: Admin messages to users
 
-Users can book vehicles with a start/end date.
+## Project Structure
 
-Real-time availability check before confirmation.
+- `/bin` - Server startup scripts
+- `/prisma` - Database schema and migrations
+- `/public` - Static assets (CSS, JavaScript, images)
+- `/src` 
+  - `/controllers` - Route handlers
+  - `/middleware` - Custom middleware functions
+  - `/routes` - API routes
+  - `/utils` - Helper functions
+  - `/views` - EJS templates
+    - `/partials` - Reusable template components
+    - `/admin` - Admin-specific views
+    - `/auth` - Authentication views
+    - `/user` - User-specific views
+    - `/vehicles` - Vehicle listing views
 
-Booking summary and payment integration (Stripe/Razorpay).
+## Contributing
 
-✅ Admin Dashboard
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-Add/update/delete vehicles.
+## License
 
-Manage bookings and approve/cancel requests.
-
-Create “Deal of the Day” offers with discount percentage and expiry.
-
-Broadcast System: Send real-time messages (daily discounts, special offers) to all connected users using Socket.io.
-
-✅ User Dashboard
-
-View current, upcoming, and past bookings.
-
-Download invoices.
-
-Receive live broadcast notifications.
-
-✅ Review System
-
-Users who completed a booking can post reviews with star ratings.
-
-Display average ratings on vehicle pages.
-
-✅ Homepage & Extras
-
-Beautiful landing page with hero section, search bar, and FAQ.
-
-Meaningful footer with links to Instagram and WhatsApp.
-
-About page and Contact page.
-
-🗂️ Database Schema (Prisma + PostgreSQL)
-
-User: id, clerkId, name, email, role, createdAt
-
-Vehicle: id, name, type, specs, pricePerDay, availability, images[], createdAt
-
-Booking: id, userId, vehicleId, startDate, endDate, status, totalPrice
-
-Review: id, bookingId, userId, vehicleId, rating, comment
-
-Deal: id, title, description, discountPercent, validUntil
-
-Broadcast: id, adminId, message, createdAt
-
-🛠️ Implementation Details
-
-Scaffold an Express app with EJS (npx express-generator --view=ejs torqueX).
-
-Add Tailwind CSS for responsive UI.
-
-Integrate Prisma with PostgreSQL and define the schema above.
-
-Implement Clerk middleware for authentication.
-
-Add Socket.io for real-time broadcast from admin dashboard to all users.
-
-Build reusable EJS partials for navbar, footer, and FAQ.
-
-Use environment variables for database credentials, Clerk keys, and Stripe/Razorpay keys.
-
-Follow MVC folder structure (routes/, controllers/, views/, models/).
-
-Seed sample vehicle data for testing.
-
-🎯 Deliverables
-
-Fully functional Express + EJS web app with Tailwind styling.
-
-Role-based dashboards (admin/user).
-
-Secure login & signup with Clerk.
-
-PostgreSQL database with Prisma migrations.
-
-Real-time broadcast notifications using Socket.io.
-
-Responsive, production-quality UI with FAQ and social links in footer.
+This project is licensed under the MIT License - see the LICENSE file for details.

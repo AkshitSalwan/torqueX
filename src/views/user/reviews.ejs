@@ -1,0 +1,120 @@
+<%- include('../partials/header') %>
+
+<div class="container mx-auto px-4 py-12">
+  <h1 class="text-3xl font-bold mb-8">My Reviews</h1>
+  
+  <div class="flex flex-col lg:flex-row gap-8">
+    <!-- Sidebar -->
+    <div class="w-full lg:w-1/4">
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex items-center mb-4">
+          <div class="h-16 w-16 rounded-full bg-blue-600 text-white flex items-center justify-center text-2xl font-bold">
+            <%= user.name.charAt(0).toUpperCase() %>
+          </div>
+          <div class="ml-4">
+            <h2 class="text-xl font-bold"><%= user.name %></h2>
+            <p class="text-gray-600"><%= user.email %></p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <nav class="divide-y divide-gray-200">
+          <a href="/user/dashboard" class="block px-6 py-4 hover:bg-gray-50 font-medium">
+            Dashboard
+          </a>
+          <a href="/user/bookings" class="block px-6 py-4 hover:bg-gray-50 font-medium">
+            My Bookings
+          </a>
+          <a href="/user/broadcasts" class="block px-6 py-4 hover:bg-gray-50 font-medium">
+            Announcements
+          </a>
+          <a href="/user/reviews" class="block px-6 py-4 bg-blue-50 border-l-4 border-blue-600 font-medium">
+            My Reviews
+          </a>
+          <a href="/user/profile" class="block px-6 py-4 hover:bg-gray-50 font-medium">
+            Profile Settings
+          </a>
+        </nav>
+      </div>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="w-full lg:w-3/4">
+      <% if (successMessage) { %>
+        <div class="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
+          <p><%= successMessage %></p>
+        </div>
+      <% } %>
+      
+      <% if (errorMessage) { %>
+        <div class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6" role="alert">
+          <p><%= errorMessage %></p>
+        </div>
+      <% } %>
+      
+      <% if (reviews && reviews.length > 0) { %>
+        <div class="grid grid-cols-1 gap-6">
+          <% reviews.forEach(review => { %>
+            <div class="bg-white rounded-lg shadow-md p-6">
+              <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4">
+                <div>
+                  <h3 class="text-xl font-bold"><%= review.vehicle.make %> <%= review.vehicle.model %> <%= review.vehicle.year %></h3>
+                  <p class="text-gray-600 text-sm">
+                    Reviewed on <%= new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) %>
+                  </p>
+                </div>
+                <div class="mt-2 md:mt-0 flex items-center">
+                  <div class="flex items-center">
+                    <% for(let i = 1; i <= 5; i++) { %>
+                      <% if (i <= review.rating) { %>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-yellow-500" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      <% } else { %>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-300" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                        </svg>
+                      <% } %>
+                    <% } %>
+                  </div>
+                  <span class="ml-2 text-gray-700 font-medium"><%= review.rating %>/5</span>
+                </div>
+              </div>
+              
+              <div class="mb-4">
+                <h4 class="font-semibold text-gray-800 mb-2"><%= review.title %></h4>
+                <p class="text-gray-700"><%= review.comment %></p>
+              </div>
+              
+              <div class="flex flex-wrap gap-2 mt-4">
+                <a href="/vehicles/<%= review.vehicleId %>" class="inline-block text-blue-600 hover:text-blue-800 font-medium text-sm">
+                  View Vehicle
+                </a>
+                
+                <% if (new Date(review.createdAt) > new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)) { %>
+                  <a href="/reviews/edit/<%= review.id %>" class="inline-block text-green-600 hover:text-green-800 font-medium text-sm">
+                    Edit Review
+                  </a>
+                <% } %>
+              </div>
+            </div>
+          <% }) %>
+        </div>
+      <% } else { %>
+        <div class="bg-white rounded-lg shadow-md p-12 text-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          <h3 class="text-xl font-medium text-gray-900 mb-2">No reviews yet</h3>
+          <p class="text-gray-500 mb-6">You haven't left any reviews for your rentals. After completing a booking, you can share your experience!</p>
+          <a href="/user/bookings" class="inline-block bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+            View My Bookings
+          </a>
+        </div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<%- include('../partials/footer') %>

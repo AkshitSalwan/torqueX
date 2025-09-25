@@ -1,0 +1,94 @@
+<nav class="bg-blue-600 text-white">
+  <div class="container mx-auto px-4">
+    <div class="flex items-center justify-between py-4">
+      <!-- Logo -->
+      <div class="flex items-center">
+        <a href="/" class="text-xl font-bold">TorqueX</a>
+      </div>
+      
+      <!-- Navigation Links -->
+      <div class="hidden md:flex items-center space-x-6">
+        <a href="/" class="hover:text-gray-200">Home</a>
+        <a href="/vehicles" class="hover:text-gray-200">Vehicles</a>
+        <a href="/about" class="hover:text-gray-200">About</a>
+        <a href="/contact" class="hover:text-gray-200">Contact</a>
+        
+        <% if (locals.user) { %>
+          <% if (user.role === 'ADMIN') { %>
+            <a href="/admin/dashboard" class="hover:text-gray-200">Admin Dashboard</a>
+          <% } else { %>
+            <a href="/user/dashboard" class="hover:text-gray-200">My Dashboard</a>
+          <% } %>
+          <div class="relative" x-data="{ open: false }">
+            <button @click="open = !open" class="flex items-center text-white hover:text-gray-200 focus:outline-none">
+              <span><%= user.name %></span>
+              <svg class="ml-1 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div x-show="open" @click.away="open = false" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
+              <% if (user.role === 'ADMIN') { %>
+                <a href="/admin/dashboard" class="block px-4 py-2 text-gray-800 hover:bg-blue-500 hover:text-white">Admin Dashboard</a>
+                <a href="/admin/vehicles" class="block px-4 py-2 text-gray-800 hover:bg-blue-500 hover:text-white">Manage Vehicles</a>
+                <a href="/admin/bookings" class="block px-4 py-2 text-gray-800 hover:bg-blue-500 hover:text-white">Manage Bookings</a>
+                <a href="/admin/broadcasts" class="block px-4 py-2 text-gray-800 hover:bg-blue-500 hover:text-white">Broadcasts</a>
+                <a href="/admin/deals" class="block px-4 py-2 text-gray-800 hover:bg-blue-500 hover:text-white">Deals</a>
+              <% } else { %>
+                <a href="/user/dashboard" class="block px-4 py-2 text-gray-800 hover:bg-blue-500 hover:text-white">Dashboard</a>
+                <a href="/user/bookings" class="block px-4 py-2 text-gray-800 hover:bg-blue-500 hover:text-white">My Bookings</a>
+                <a href="/user/reviews" class="block px-4 py-2 text-gray-800 hover:bg-blue-500 hover:text-white">My Reviews</a>
+                <a href="/user/profile" class="block px-4 py-2 text-gray-800 hover:bg-blue-500 hover:text-white">Profile Settings</a>
+              <% } %>
+              <div class="border-t border-gray-200 my-1"></div>
+              <a href="/auth/logout" class="block px-4 py-2 text-gray-800 hover:bg-blue-500 hover:text-white">Logout</a>
+            </div>
+          </div>
+        <% } else { %>
+          <a href="/auth/login" class="bg-white text-blue-600 px-4 py-2 rounded-md hover:bg-gray-100">Login</a>
+          <a href="/auth/signup" class="bg-blue-700 text-white px-4 py-2 rounded-md hover:bg-blue-800">Sign Up</a>
+        <% } %>
+      </div>
+      
+      <!-- Mobile Menu Button -->
+      <div class="md:hidden">
+        <button class="text-white focus:outline-none" x-data="{ open: false }" @click="open = !open" :aria-expanded="open">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path x-show="!open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+            <path x-show="open" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+    </div>
+    
+    <!-- Mobile Menu -->
+    <div class="md:hidden" x-data="{ open: false }" x-show="open" @click.away="open = false">
+      <div class="px-2 pt-2 pb-3 space-y-1">
+        <a href="/" class="block px-3 py-2 rounded-md hover:bg-blue-700">Home</a>
+        <a href="/vehicles" class="block px-3 py-2 rounded-md hover:bg-blue-700">Vehicles</a>
+        <a href="/about" class="block px-3 py-2 rounded-md hover:bg-blue-700">About</a>
+        <a href="/contact" class="block px-3 py-2 rounded-md hover:bg-blue-700">Contact</a>
+        
+        <% if (locals.user) { %>
+          <% if (user.role === 'ADMIN') { %>
+            <a href="/admin/dashboard" class="block px-3 py-2 rounded-md hover:bg-blue-700">Admin Dashboard</a>
+            <a href="/admin/vehicles" class="block px-3 py-2 rounded-md hover:bg-blue-700">Manage Vehicles</a>
+            <a href="/admin/bookings" class="block px-3 py-2 rounded-md hover:bg-blue-700">Manage Bookings</a>
+            <a href="/admin/broadcasts" class="block px-3 py-2 rounded-md hover:bg-blue-700">Broadcasts</a>
+            <a href="/admin/deals" class="block px-3 py-2 rounded-md hover:bg-blue-700">Deals</a>
+          <% } else { %>
+            <a href="/user/dashboard" class="block px-3 py-2 rounded-md hover:bg-blue-700">Dashboard</a>
+            <a href="/user/bookings" class="block px-3 py-2 rounded-md hover:bg-blue-700">My Bookings</a>
+            <a href="/user/reviews" class="block px-3 py-2 rounded-md hover:bg-blue-700">My Reviews</a>
+            <a href="/user/profile" class="block px-3 py-2 rounded-md hover:bg-blue-700">Profile Settings</a>
+          <% } %>
+          <div class="border-t border-blue-700 my-2"></div>
+          <a href="/auth/logout" class="block px-3 py-2 rounded-md hover:bg-blue-700">Logout</a>
+        <% } else { %>
+          <div class="border-t border-blue-700 my-2"></div>
+          <a href="/auth/login" class="block px-3 py-2 rounded-md hover:bg-blue-700">Login</a>
+          <a href="/auth/signup" class="block px-3 py-2 rounded-md hover:bg-blue-700">Sign Up</a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+</nav>
