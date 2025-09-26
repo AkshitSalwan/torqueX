@@ -35,6 +35,8 @@ app.io = io;
 // Middleware to make io available in all routes
 app.use((req, res, next) => {
   req.io = io;
+  // Also set it in app for global access
+  app.set('io', io);
   next();
 });
 

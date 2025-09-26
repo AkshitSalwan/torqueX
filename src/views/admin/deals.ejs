@@ -114,7 +114,9 @@
                       <div class="text-sm font-medium text-gray-900"><%= deal.code %></div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                      <div class="text-sm text-gray-900"><%= deal.discount.toFixed(0) %>%</div>
+                      <div class="text-sm text-gray-900">
+                        <%= deal.discountType === 'PERCENTAGE' ? deal.discountValue.toFixed(0) + '%' : '$' + deal.discountValue.toFixed(2) %>
+                      </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="text-sm text-gray-500"><%= deal.description || 'No description' %></div>
@@ -145,16 +147,19 @@
                         class="text-blue-600 hover:text-blue-900 mr-3 edit-deal-btn" 
                         data-id="<%= deal.id %>"
                         data-code="<%= deal.code %>"
+                        data-title="<%= deal.title %>"
                         data-description="<%= deal.description || '' %>"
-                        data-discount="<%= deal.discount %>"
+                        data-discount-type="<%= deal.discountType %>"
+                        data-discount-value="<%= deal.discountValue %>"
+                        data-min-purchase="<%= deal.minPurchase || '' %>"
                         data-valid-from="<%= deal.validFrom.toISOString().split('T')[0] %>"
                         data-valid-until="<%= deal.validUntil.toISOString().split('T')[0] %>"
                         data-is-active="<%= deal.isActive %>"
                       >
                         Edit
                       </button>
-                      <form action="/admin/deals/<%= deal.id %>/delete" method="POST" class="inline-block" onsubmit="return confirm('Are you sure you want to delete this deal?');">
-                        <button type="submit" class="text-red-600 hover:text-red-900">
+                      <form class="inline-block delete-form" data-id="<%= deal.id %>" onsubmit="return false;">
+                        <button type="button" class="text-red-600 hover:text-red-900 delete-deal-btn">
                           Delete
                         </button>
                       </form>
@@ -249,6 +254,13 @@ document.addEventListener('DOMContentLoaded', function() {
     // Reset the form
     dealForm.reset();
     dealForm.action = '/admin/deals';
+    dealForm.method = 'POST';
+    
+    // Remove any _method field if it exists
+    const methodField = dealForm.querySelector('input[name="_method"]');
+    if (methodField) {
+      methodField.remove();
+    }
     
     // Set default values
     const today = new Date();
@@ -261,6 +273,55 @@ document.addEventListener('DOMContentLoaded', function() {
     
     modalTitle.textContent = 'Add New Deal';
     dealModal.classList.remove('hidden');
+  });
+  
+  // Handle form submission with fetch API
+  dealForm.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Collect form data
+    const formData = new FormData(dealForm);
+    const data = {};
+    formData.forEach((value, key) => {
+      // Handle checkbox
+      if (key === 'isActive') {
+        data[key] = true;
+      } else {
+        data[key] = value;
+      }
+    });
+    
+    // Set isActive to false if checkbox is not checked
+    if (!formData.has('isActive')) {
+      data['isActive'] = false;
+    }
+    
+    // Determine if this is a create or update operation
+    // Always use POST method with method-override for PUT
+    const url = dealForm.action;
+    
+    // Use fetch API to send the request as POST with _method for PUT
+    fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+      credentials: 'same-origin'
+    })
+    .then(response => {
+      if (response.ok) {
+        window.location.reload();
+      } else {
+        return response.json().then(data => {
+          throw new Error(data.message || 'An error occurred');
+        });
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert(error.message || 'Failed to save deal. Please try again.');
+    });
   });
   
   // Hide modal on overlay click
@@ -279,8 +340,19 @@ document.addEventListener('DOMContentLoaded', function() {
     btn.addEventListener('click', function() {
       const deal = btn.dataset;
       
-      // Update form action for updating
-      dealForm.action = `/admin/deals/${deal.id}/update`;
+      // Update form action and method for updating
+      dealForm.action = `/admin/deals/${deal.id}`;
+      dealForm.method = 'POST';
+      
+      // Add a hidden method field for PUT request
+      let methodField = dealForm.querySelector('input[name="_method"]');
+      if (!methodField) {
+        methodField = document.createElement('input');
+        methodField.type = 'hidden';
+        methodField.name = '_method';
+        dealForm.appendChild(methodField);
+      }
+      methodField.value = 'PUT';
       
       // Set form values
       dealId.value = deal.id;
@@ -293,6 +365,32 @@ document.addEventListener('DOMContentLoaded', function() {
       
       modalTitle.textContent = 'Edit Deal';
       dealModal.classList.remove('hidden');
+    });
+  });
+  
+  // Delete deal buttons
+  document.querySelectorAll('.delete-deal-btn').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      const form = btn.closest('.delete-form');
+      const dealId = form.dataset.id;
+      
+      if (confirm('Are you sure you want to delete this deal?')) {
+        // Create a form with method-override to submit the DELETE request
+        const deleteForm = document.createElement('form');
+        deleteForm.method = 'POST';
+        deleteForm.action = `/admin/deals/${dealId}`;
+        
+        // Add method override field
+        const methodField = document.createElement('input');
+        methodField.type = 'hidden';
+        methodField.name = '_method';
+        methodField.value = 'DELETE';
+        deleteForm.appendChild(methodField);
+        
+        // Add form to document and submit
+        document.body.appendChild(deleteForm);
+        deleteForm.submit();
+      }
     });
   });
 

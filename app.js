@@ -8,6 +8,7 @@ const { PrismaClient } = require('@prisma/client');
 const { createClerkClient, ClerkExpressWithAuth } = require('@clerk/clerk-sdk-node');
 const flash = require('connect-flash');
 const session = require('express-session');
+const methodOverride = require('method-override');
 
 // Import routes
 const indexRouter = require('./src/routes/indexRoutes');
@@ -35,6 +36,7 @@ app.set('view engine', 'ejs');
 app.use(logger('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use(methodOverride('_method')); // Add support for PUT/DELETE in forms
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -59,8 +61,8 @@ app.use((req, res, next) => {
   res.locals.successMessages = req.flash('success');
   res.locals.errorMessages = req.flash('error');
   
-  // Make publishable key available to templates
-  res.locals.clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY;
+  // We'll be handling Clerk initialization directly in the header template
+  // to avoid any issues with environment variables not being properly passed
   
   next();
 });

@@ -99,7 +99,7 @@
       
       <!-- Vehicle Form -->
       <div class="bg-white rounded-lg shadow overflow-hidden">
-        <form method="POST" action="<%= vehicle ? `/admin/vehicles/${vehicle.id}` : '/admin/vehicles' %>" class="p-6">
+        <form method="POST" action="<%= vehicle ? `/admin/vehicles/${vehicle.id}` : '/admin/vehicles' %>" class="p-6" enctype="multipart/form-data">
           <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
             <!-- Vehicle Basic Info -->
             <div class="sm:col-span-3">
@@ -379,35 +379,90 @@
 <script>
   document.addEventListener('DOMContentLoaded', function() {
     const form = document.querySelector('form');
+    
+    // Validate form fields before submission
+    function validateForm() {
+      const make = form.querySelector('#make').value.trim();
+      const model = form.querySelector('#model').value.trim();
+      const type = form.querySelector('#type').value.trim();
+      const pricePerDay = form.querySelector('#pricePerDay').value.trim();
+      const seats = form.querySelector('#seats').value.trim();
+      const transmission = form.querySelector('#transmission').value.trim();
+      const fuelType = form.querySelector('#fuelType').value.trim();
+      
+      const errors = [];
+      
+      if (!make) errors.push('Make is required');
+      if (!model) errors.push('Model is required');
+      if (!type) errors.push('Type is required');
+      if (!pricePerDay) errors.push('Price per day is required');
+      if (!seats) errors.push('Seats information is required');
+      if (!transmission) errors.push('Transmission is required');
+      if (!fuelType) errors.push('Fuel type is required');
+      
+      if (pricePerDay && isNaN(parseFloat(pricePerDay))) {
+        errors.push('Price per day must be a valid number');
+      }
+      
+      return errors;
+    }
+    
     form.addEventListener('submit', function(e) {
       e.preventDefault();
+      
+      // Client-side validation
+      const errors = validateForm();
+      
+      if (errors.length > 0) {
+        alert('Please fix the following errors:\n' + errors.join('\n'));
+        return;
+      }
+      
+      // Log form data to debug
+      console.log('Submitting vehicle form...');
+      
+      // Create FormData from the form
+      const formData = new FormData(form);
+      
+      // Debug: log form data values
+      for (let [key, value] of formData.entries()) {
+        console.log(`${key}: ${value instanceof File ? 'File: ' + value.name : value}`);
+      }
       
       // Submit the form using fetch
       fetch(form.action, {
         method: 'POST',
         headers: {
-          'Accept': 'application/json, text/plain, */*',
+          'Accept': 'application/json'
+          // Don't set Content-Type, let the browser set it with the boundary for FormData
         },
-        body: new FormData(form)
+        body: formData
       })
       .then(response => {
-        // If it's a redirect, follow it
         if (response.redirected) {
           window.location.href = response.url;
+          return null;
         } else {
           return response.json();
         }
       })
       .then(data => {
+        if (data === null) {
+          return; // Already redirected
+        }
+        
         if (data && data.success === false) {
           alert(data.message);
+        } else if (data && data.success === true) {
+          alert('Vehicle saved successfully!');
+          window.location.href = data.redirectUrl || '/admin/vehicles';
         } else {
-          // If we get here, redirect manually
           window.location.href = '/admin/vehicles';
         }
       })
       .catch(error => {
         console.error('Error submitting form:', error);
+        alert('An error occurred while saving the vehicle. Please try again.');
       });
     });
   });

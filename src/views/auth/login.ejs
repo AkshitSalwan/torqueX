@@ -66,30 +66,50 @@
       }
       
       try {
-        // Check if Clerk is ready
-        if (!window.Clerk.__loaded) {
-          console.log('Clerk loaded but not yet fully initialized');
-          return false;
-        }
-        
-        console.log('Clerk is fully initialized, mounting sign-in component');
+        console.log('Attempting to mount Clerk sign-in component');
         
         // Hide the fallback form
         formElement.style.display = 'none';
         
         // Show and mount Clerk component
         clerkContainer.style.display = 'block';
+        clerkContainer.innerHTML = ''; // Clear loading message
         
         // Use a try-catch to handle potential errors
         try {
-          window.Clerk.mountSignIn(clerkContainer, {
-            signInUrl: '/auth/login',
-            afterSignInUrl: '/auth/callback',
-            redirectUrl: '/auth/callback',
-          });
+          // Get the publishable key from meta tag
+          const publishableKey = document.querySelector('meta[name="clerk-publishable-key"]')?.content;
+          
+          if (!publishableKey) {
+            console.error('Missing Clerk publishable key');
+            throw new Error('Missing Clerk publishable key');
+          }
+          
+          // Initialize with the publishable key directly
+          if (!window.Clerk.__loaded) {
+            window.Clerk.load({ 
+              publishableKey: publishableKey 
+            }).then(() => {
+              window.Clerk.mountSignIn(clerkContainer, {
+                signInUrl: '/auth/login',
+                afterSignInUrl: '/auth/callback',
+                redirectUrl: '/auth/callback'
+              });
+            });
+          } else {
+            window.Clerk.mountSignIn(clerkContainer, {
+              signInUrl: '/auth/login',
+              afterSignInUrl: '/auth/callback',
+              redirectUrl: '/auth/callback'
+            });
+          }
+          
           return true;
         } catch (error) {
           console.error('Error mounting Clerk:', error);
+          // Show fallback form on error
+          formElement.style.display = 'block';
+          clerkContainer.style.display = 'none';
           return false;
         }
       } catch (error) {
@@ -100,24 +120,16 @@
     
     // Listen for the clerkLoaded custom event
     document.addEventListener('clerkLoaded', function() {
-      // Wait for Clerk to be fully initialized
-      const checkInterval = setInterval(function() {
-        if (mountClerk()) {
-          clearInterval(checkInterval);
-        }
-      }, 200);
-      
-      // Set a timeout to stop trying after 5 seconds
-      setTimeout(function() {
-        clearInterval(checkInterval);
-        console.warn('Timed out waiting for Clerk to initialize, using fallback form');
-      }, 5000);
+      console.log('Clerk script loaded event received');
+      mountClerk();
     });
     
     // Also try after a delay as a backup
     setTimeout(function() {
-      mountClerk();
-    }, 2000);
+      if (typeof window.Clerk !== 'undefined') {
+        mountClerk();
+      }
+    }, 1500);
   });
 </script>
 

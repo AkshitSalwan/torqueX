@@ -6,78 +6,37 @@
   <title><%= typeof title !== 'undefined' ? title : 'Error' %> | TorqueX</title>
   <link rel="stylesheet" href="/stylesheets/style.css">
   <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-  <% if (locals.clerkPublishableKey) { %>
-  <!-- Load Clerk directly from the correct instance domain -->
+  <!-- Clerk Authentication -->
+  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
   <script>
-    // Extract the clerk domain from the key
-    function extractClerkDomain(key) {
+    document.addEventListener('DOMContentLoaded', function() {
+      // Ensure we have a valid Clerk key - use this fallback key for development
+      // In production, this would be passed from environment variables
+      const publishableKey = 'pk_test_bW9kZXN0LWJlYWdsZS0zMC5jbGVyay5hY2NvdW50cy5kZXYk';
+      console.log('Initializing Clerk with key:', publishableKey.substring(0, 10) + '...');
+      
       try {
-        // Check if key exists and is not empty
-        if (!key || key === 'undefined' || key.trim() === '') {
-          return null;
-        }
-        
-        // Decode the base64 key
-        const decoded = atob(key);
-        // Extract the domain from the decoded key if possible
-        const domainMatch = decoded.match(/([a-z0-9-]+)\.clerk\.accounts\.dev/);
-        if (domainMatch && domainMatch[1]) {
-          return `${domainMatch[1]}.clerk.accounts.dev`;
-        }
-      } catch (e) {
-        console.error('Error extracting domain from key:', e);
-      }
-      // Default to the CDN version if we can't extract domain
-      return null;
-    }
-    
-    window.addEventListener('DOMContentLoaded', function() {
-      // Wait a bit to ensure other DOM content has loaded
-      setTimeout(function() {
-        // Check if clerk key is available
-        const clerkKey = '<%= locals.clerkPublishableKey || "" %>';
-        if (!clerkKey || clerkKey === 'undefined') {
-          console.warn('Clerk publishable key not available, skipping Clerk initialization');
-          return;
-        }
-        
-        // Get the clerk domain if possible
-        const clerkDomain = extractClerkDomain(clerkKey);
-        const script = document.createElement('script');
-        script.async = true;
-        script.crossOrigin = "anonymous";
-        script.setAttribute('data-clerk-publishable-key', clerkKey);
-        
-        if (clerkDomain) {
-          console.log(`Loading Clerk from domain: ${clerkDomain}`);
-          script.src = `https://${clerkDomain}/v1/clerk.js`;
+        if (window.Clerk) {
+          window.Clerk.load({ 
+            publishableKey: publishableKey
+          }).then(function() {
+            console.log('Clerk initialized successfully');
+            document.dispatchEvent(new Event('clerkLoaded'));
+          }).catch(function(error) {
+            console.error('Error initializing Clerk:', error);
+            // Fallback to traditional auth in case of Clerk error
+            document.dispatchEvent(new Event('clerkFailed'));
+          });
         } else {
-          console.log('Loading Clerk from CDN (fallback)');
-          script.src = "https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js";
+          console.warn('Clerk object not available, using fallback authentication');
+          document.dispatchEvent(new Event('clerkFailed'));
         }
-        
-        script.onload = function() {
-          console.log('Clerk loaded successfully');
-          // Dispatch an event that other scripts can listen for
-          document.dispatchEvent(new Event('clerkLoaded'));
-        };
-        
-        script.onerror = function() {
-          console.error('Failed to load Clerk, trying CDN fallback');
-          if (script.src !== "https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js") {
-            // Try CDN as fallback
-            script.src = "https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js";
-            document.head.appendChild(script);
-          }
-        };
-        
-        document.head.appendChild(script);
-      }, 100);
+      } catch (error) {
+        console.error('Critical error initializing auth:', error);
+        document.dispatchEvent(new Event('clerkFailed'));
+      }
     });
   </script>
-  <% } else { %>
-  <!-- Clerk publishable key not available -->
-  <% } %>
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">

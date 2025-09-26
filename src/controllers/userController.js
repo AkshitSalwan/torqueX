@@ -128,7 +128,7 @@ exports.getBookings = async (req, res) => {
         vehicle: true
       },
       orderBy: {
-        createdAt: 'desc'
+        id: 'desc' // Use id instead of createdAt for ordering
       }
     });
     

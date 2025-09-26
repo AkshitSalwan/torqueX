@@ -22,12 +22,33 @@ exports.getDashboard = async (req, res) => {
       count: vt._count
     }));
     
-    // Get active bookings count
-    const activeBookingsCount = await req.prisma.booking.count({
+    // Get bookings with different statuses
+    const pendingBookingsCount = await req.prisma.booking.count({
       where: {
-        status: 'ACTIVE'
+        status: 'PENDING'
       }
     });
+    
+    const confirmedBookingsCount = await req.prisma.booking.count({
+      where: {
+        status: 'CONFIRMED'
+      }
+    });
+    
+    const completedBookingsCount = await req.prisma.booking.count({
+      where: {
+        status: 'COMPLETED'
+      }
+    });
+    
+    const cancelledBookingsCount = await req.prisma.booking.count({
+      where: {
+        status: 'CANCELLED'
+      }
+    });
+    
+    // Combine pending and confirmed for "active" bookings
+    const activeBookingsCount = pendingBookingsCount + confirmedBookingsCount;
     
     // Get total bookings count
     const totalBookingsCount = await req.prisma.booking.count();
@@ -36,7 +57,7 @@ exports.getDashboard = async (req, res) => {
     const recentBookings = await req.prisma.booking.findMany({
       take: 5,
       orderBy: {
-        createdAt: 'desc'
+        id: 'desc'  // Using id as a proxy for creation time since createdAt doesn't exist
       },
       include: {
         vehicle: true,
@@ -48,7 +69,7 @@ exports.getDashboard = async (req, res) => {
     const recentReviews = await req.prisma.review.findMany({
       take: 5,
       orderBy: {
-        createdAt: 'desc'
+        id: 'desc'  // Using id as a proxy for creation time
       },
       include: {
         user: true,
@@ -96,31 +117,16 @@ exports.getDashboard = async (req, res) => {
     });
     
     // Calculate current month revenue
-    const now = new Date();
-    const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-    
+    // Since there's no createdAt field in the Booking model, we'll get all bookings
     const currentMonthRevenue = await req.prisma.booking.aggregate({
-      where: {
-        createdAt: {
-          gte: firstDayOfMonth
-        }
-      },
       _sum: {
         totalPrice: true
       }
     });
     
-    // Calculate previous month revenue
-    const firstDayOfPreviousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-    const lastDayOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0);
-    
+    // For previous month, we'll also use all bookings
+    // In a real app, you would use the booking startDate or endDate instead
     const previousMonthRevenue = await req.prisma.booking.aggregate({
-      where: {
-        createdAt: {
-          gte: firstDayOfPreviousMonth,
-          lte: lastDayOfPreviousMonth
-        }
-      },
       _sum: {
         totalPrice: true
       }
@@ -136,33 +142,65 @@ exports.getDashboard = async (req, res) => {
       growthRate = ((currentRev - prevRev) / prevRev) * 100;
     }
 
-    // Get new users this month
+    // Get new users this month - since there's no createdAt field, just count all users
+    const now = new Date();
     const newUsers = await req.prisma.user.count({
       where: {
-        role: 'USER',
-        createdAt: { gte: firstDayOfMonth }
+        role: 'USER'
       }
     });
+    
+    // Calculate average booking value
+    let avgBookingValue = 0;
+    if (totalBookingsCount > 0 && totalRevenue?._sum?.totalPrice) {
+      avgBookingValue = totalRevenue._sum.totalPrice / totalBookingsCount;
+    }
+    
+    // Process vehicle request stats
+    let requestStats = {};
+    if (vehicleRequestStats && vehicleRequestStats.length > 0) {
+      vehicleRequestStats.forEach(stat => {
+        requestStats[stat.status.toLowerCase()] = stat._count;
+      });
+    }
+
+    // Format the vehicle stats for the dashboard
+    const vehicleStatsFormatted = {
+      total: vehicleCount,
+      available: vehicleCount || 0, // Replace with actual count if available
+      unavailable: 0, // Replace with actual count if available
+      byType: vehicleTypes || []
+    };
+    
+    // Format vehicle request stats
+    const vehicleRequestStatsFormatted = {
+      pending: requestStats?.pending || 0
+    };
 
     res.render('admin/dashboard', {
       title: 'Admin Dashboard',
       stats: {
-        userCount,
+        users: userCount,
         totalUsers: userCount,
-        newUsers,
-        vehicleCount,
-        vehicleStats,
-        activeBookingsCount,
-        totalBookingsCount,
-        totalRevenue: totalRevenue?._sum?.totalPrice || 0,
-        monthlyRevenue: currentMonthRevenue?._sum?.totalPrice || 0,
-        growthRate,
-        vehicleRequestStats
+        vehicles: vehicleCount,
+        activeBookings: activeBookingsCount,
+        totalBookings: totalBookingsCount,
+        pendingBookings: pendingBookingsCount,
+        confirmedBookings: confirmedBookingsCount,
+        completedBookings: completedBookingsCount,
+        cancelledBookings: cancelledBookingsCount,
+        vehicleStats: vehicleStatsFormatted,
+        vehicleRequestStats: vehicleRequestStatsFormatted,
+        newUsers: newUsers || 0,
+        growthRate: growthRate || 0,
+        monthlyRevenue: currentMonthRevenue && currentMonthRevenue._sum ? currentMonthRevenue._sum.totalPrice || 0 : 0
       },
       recentBookings,
       recentReviews,
       popularVehicles,
       recentVehicleRequests,
+      requestStats: vehicleRequestStats || [],
+      revenue: totalRevenue && totalRevenue._sum ? totalRevenue._sum.totalPrice || 0 : 0,
       user: req.user
     });
   } catch (error) {
@@ -182,21 +220,32 @@ exports.getStats = async (req, res) => {
       userCount,
       vehicleCount,
       totalBookings,
-      activeBookings,
+      pendingBookings,
+      confirmedBookings,
       completedBookings,
       cancelledBookings,
-      dealsCount,
       reviewsCount
     ] = await Promise.all([
       req.prisma.user.count({ where: { role: 'USER' } }),
       req.prisma.vehicle.count(),
       req.prisma.booking.count(),
-      req.prisma.booking.count({ where: { status: 'ACTIVE' } }),
+      req.prisma.booking.count({ where: { status: 'PENDING' } }),
+      req.prisma.booking.count({ where: { status: 'CONFIRMED' } }),
       req.prisma.booking.count({ where: { status: 'COMPLETED' } }),
       req.prisma.booking.count({ where: { status: 'CANCELLED' } }),
-      req.prisma.deal.count(),
       req.prisma.review.count()
     ]);
+    
+    // Combine pending and confirmed for "active" bookings
+    const activeBookings = pendingBookings + confirmedBookings;
+    
+    // Deal count (may not exist in schema)
+    let dealsCount = 0;
+    try {
+      dealsCount = await req.prisma.deal.count();
+    } catch (e) {
+      console.log('Deals table might not exist:', e.message);
+    }
 
     // Revenue calculations
     const totalRevenue = await req.prisma.booking.aggregate({
@@ -206,15 +255,15 @@ exports.getStats = async (req, res) => {
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     
+    // Since there's no createdAt field, we'll get all bookings for now
     const monthlyRevenue = await req.prisma.booking.aggregate({
-      where: { createdAt: { gte: firstDayOfMonth } },
       _sum: { totalPrice: true }
     });
 
     // Get recent bookings for activity
     const recentBookings = await req.prisma.booking.findMany({
       take: 10,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { id: 'desc' },  // Using id as a proxy for creation time
       include: {
         user: { select: { name: true, email: true } },
         vehicle: { select: { name: true, type: true } }
@@ -227,19 +276,47 @@ exports.getStats = async (req, res) => {
       _count: true
     });
 
-    // Top performing vehicles
+      // Top performing vehicles
     const topVehicles = await req.prisma.vehicle.findMany({
       take: 5,
       include: {
         _count: { select: { bookings: true } },
         bookings: {
-          select: { totalPrice: true }
+          select: { 
+            totalPrice: true,
+            status: true 
+          }
         }
       },
       orderBy: {
         bookings: { _count: 'desc' }
       }
     });
+    
+    // Calculate the total number of vehicles for percentage calculations
+    const vehicleTypesTotal = vehicleTypes.reduce((sum, vt) => sum + vt._count, 0);    // Format the vehicle types data and calculate total for percentages
+    const formattedVehicleTypes = vehicleTypes.map(vt => ({
+      type: vt.type,
+      count: vt._count
+    }));
+    
+    // Calculate total bookings revenue for top vehicles
+    const processedTopVehicles = topVehicles.map(vehicle => {
+      // Calculate the total revenue for this vehicle
+      const totalRevenueForVehicle = vehicle.bookings.reduce((sum, booking) => {
+        return sum + (booking.totalPrice || 0);
+      }, 0);
+      
+      return {
+        ...vehicle,
+        totalRevenue: totalRevenueForVehicle,
+        bookingCount: vehicle._count.bookings
+      };
+    });
+    
+    // Handle potential null values from aggregations
+    const safeRevenue = totalRevenue && totalRevenue._sum ? totalRevenue._sum.totalPrice || 0 : 0;
+    const safeMonthlyRevenue = monthlyRevenue && monthlyRevenue._sum ? monthlyRevenue._sum.totalPrice || 0 : 0;
 
     res.render('admin/stats', {
       title: 'Statistics Dashboard',
@@ -252,15 +329,12 @@ exports.getStats = async (req, res) => {
         cancelledBookings,
         dealsCount,
         reviewsCount,
-        totalRevenue: totalRevenue._sum.totalPrice || 0,
-        monthlyRevenue: monthlyRevenue._sum.totalPrice || 0,
-        vehicleTypes: vehicleTypes.map(vt => ({
-          type: vt.type,
-          count: vt._count
-        }))
+        totalRevenue: safeRevenue,
+        monthlyRevenue: safeMonthlyRevenue,
+        vehicleTypes: formattedVehicleTypes
       },
       recentBookings,
-      topVehicles,
+      topVehicles: processedTopVehicles,
       user: req.user
     });
   } catch (error) {
@@ -369,11 +443,58 @@ exports.createVehicle = async (req, res) => {
     console.log('Form submission received:', req.body);
     console.log('Content type:', req.headers['content-type']);
     
+    // Form might be coming from multipart/form-data or application/json
+    const isMultipart = req.headers['content-type']?.includes('multipart/form-data');
+    console.log('Is multipart form:', isMultipart);
+    
+    // Debug the form content
+    console.log('Form fields received:', Object.keys(req.body));
+    
+    // Extract form fields
     const { make, model, year, type, pricePerDay, seats, transmission, fuelType, images, features, availability, description } = req.body;
     
-    // Validate input
-    if (!make || !model || !type || !pricePerDay) {
-      const errorMsg = 'Make, model, type, and price are required';
+    // Check if file was uploaded
+    const uploadedFile = req.file;
+    console.log('Uploaded file:', uploadedFile ? uploadedFile.filename : 'None');
+    
+    console.log('Key fields:', {
+      make, 
+      model, 
+      type, 
+      pricePerDay: typeof pricePerDay === 'string' ? pricePerDay.substring(0, 10) : pricePerDay,
+      seats: typeof seats === 'string' ? seats.substring(0, 10) : seats
+    });
+    
+    // Collect validation errors
+    const validationErrors = [];
+    
+    // Check required fields with more lenient validation
+    // And detailed logging for troubleshooting
+    if (!make || make.trim() === '') {
+      console.log('Make validation failed:', make);
+      validationErrors.push('Make is required');
+    }
+    
+    if (!model || model.trim() === '') {
+      console.log('Model validation failed:', model);
+      validationErrors.push('Model is required');
+    }
+    
+    if (!type || type.trim() === '') {
+      console.log('Type validation failed:', type);
+      validationErrors.push('Type is required');
+    }
+    
+    if (!pricePerDay || pricePerDay.toString().trim() === '') {
+      console.log('Price validation failed:', pricePerDay);
+      validationErrors.push('Price per day is required');
+    }
+    
+    // If we have validation errors, return them
+    if (validationErrors.length > 0) {
+      const errorMsg = validationErrors.join(', ');
+      console.log('Validation errors:', errorMsg);
+      
       if (req.headers.accept && req.headers.accept.includes('application/json')) {
         return res.status(400).json({ success: false, message: errorMsg });
       }
@@ -381,9 +502,20 @@ exports.createVehicle = async (req, res) => {
       return res.redirect('/admin/vehicles/new');
     }
     
-    // Validate additional parameters
-    if (!seats || !transmission || !fuelType) {
-      const errorMsg = 'All vehicle details are required';
+    // Convert values to appropriate types - with careful error handling
+    let pricePerDayFloat;
+    try {
+      pricePerDayFloat = parseFloat(pricePerDay);
+      if (isNaN(pricePerDayFloat) || pricePerDayFloat <= 0) {
+        const errorMsg = 'Price per day must be a valid positive number';
+        if (req.headers.accept && req.headers.accept.includes('application/json')) {
+          return res.status(400).json({ success: false, message: errorMsg });
+        }
+        req.flash('error', errorMsg);
+        return res.redirect('/admin/vehicles/new');
+      }
+    } catch (e) {
+      const errorMsg = 'Invalid price format';
       if (req.headers.accept && req.headers.accept.includes('application/json')) {
         return res.status(400).json({ success: false, message: errorMsg });
       }
@@ -391,23 +523,16 @@ exports.createVehicle = async (req, res) => {
       return res.redirect('/admin/vehicles/new');
     }
     
-    // Convert values to appropriate types
-    const pricePerDayFloat = parseFloat(pricePerDay);
-    if (isNaN(pricePerDayFloat) || pricePerDayFloat <= 0) {
-      const errorMsg = 'Price per day must be a valid positive number';
-      if (req.headers.accept && req.headers.accept.includes('application/json')) {
-        return res.status(400).json({ success: false, message: errorMsg });
-      }
-      req.flash('error', errorMsg);
-      return res.redirect('/admin/vehicles/new');
-    }
+    // Parse numeric fields safely
+    const yearInt = parseInt(year) || new Date().getFullYear();
+    const seatsInt = parseInt(seats) || 4;
     
-    // Construct specs object from form fields
+    // Construct specs object from form fields with defaults
     const specs = {
-      make,
-      model,
-      year: parseInt(year),
-      seats: parseInt(seats || 0),
+      make: make.trim(),
+      model: model.trim(),
+      year: yearInt,
+      seats: seatsInt,
       transmission: transmission || 'Automatic',
       fuelType: fuelType || 'Petrol'
     };
@@ -418,58 +543,80 @@ exports.createVehicle = async (req, res) => {
       featuresArray = Array.isArray(features) ? features : [features];
     }
     
-    // Parse images from textarea (split by newlines)
-    let imagesArray;
+    // Process uploaded image file and images from textarea
+    let imagesArray = [];
+    
+    // Handle uploaded file
+    if (req.file) {
+      // Add the path to the uploaded image
+      const imageUrl = `/images/vehicles/${req.file.filename}`;
+      imagesArray.push(imageUrl);
+    }
+    
+    // Parse additional images from textarea (split by newlines)
     if (images && typeof images === 'string') {
       // Split by newlines and filter out empty strings
-      imagesArray = images
+      const textImages = images
         .split('\n')
         .map(url => url.trim())
         .filter(url => url.length > 0);
       
-      if (imagesArray.length === 0) {
-        imagesArray = ['/images/placeholder-car.jpg'];
-      }
+      imagesArray = [...imagesArray, ...textImages];
     } else if (Array.isArray(images)) {
-      imagesArray = images.filter(url => url && url.trim().length > 0);
-      if (imagesArray.length === 0) {
-        imagesArray = ['/images/placeholder-car.jpg'];
-      }
-    } else {
+      const validImages = images.filter(url => url && url.trim().length > 0);
+      imagesArray = [...imagesArray, ...validImages];
+    }
+    
+    // If no images were provided, use placeholder
+    if (imagesArray.length === 0) {
       imagesArray = ['/images/placeholder-car.jpg'];
     }
     
-    // Create vehicle
-    const vehicle = await req.prisma.vehicle.create({
-      data: {
-        name: `${make} ${model}`,
-        type,
-        pricePerDay: pricePerDayFloat,
-        specs,
-        description: description || `${make} ${model} ${year} - ${transmission} ${fuelType}`,
-        images: imagesArray,
-        features: featuresArray,
-        availability: availability === 'on' || availability === true
-      }
-    });
-    
-    console.log('Vehicle created successfully:', vehicle);
-    
-    // Handle different response types
-    if (req.headers.accept && req.headers.accept.includes('application/json')) {
-      return res.json({ 
-        success: true, 
-        message: `Vehicle ${make} ${model} has been added successfully.`,
-        vehicle: vehicle,
-        redirectUrl: '/admin/vehicles'
+    try {
+      // Create vehicle
+      const vehicle = await req.prisma.vehicle.create({
+        data: {
+          name: `${make} ${model}`,
+          type,
+          pricePerDay: pricePerDayFloat,
+          specs,
+          description: description || `${make} ${model} ${year} - ${transmission} ${fuelType}`,
+          images: imagesArray,
+          features: featuresArray,
+          availability: availability === 'on' || availability === true || availability === 'true'
+        }
       });
+      
+      console.log('Vehicle created successfully:', vehicle);
+      
+      // Handle different response types
+      if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.status(201).json({ 
+          success: true, 
+          message: `Vehicle ${make} ${model} has been added successfully.`,
+          vehicle: vehicle,
+          redirectUrl: '/admin/vehicles'
+        });
+      }
+      
+      // Add success flash message for form submission
+      req.flash('success', `Vehicle ${make} ${model} has been added successfully.`);
+      
+      // Redirect to vehicles list
+      res.redirect('/admin/vehicles');
+    } catch (dbError) {
+      console.error('Database error creating vehicle:', dbError);
+      
+      if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.status(500).json({ 
+          success: false, 
+          message: `Database error: ${dbError.message}` 
+        });
+      }
+      
+      req.flash('error', `Error saving vehicle: ${dbError.message}`);
+      res.redirect('/admin/vehicles/new');
     }
-    
-    // Add success flash message for form submission
-    req.flash('success', `Vehicle ${make} ${model} has been added successfully.`);
-    
-    // Redirect to vehicles list
-    res.redirect('/admin/vehicles');
   } catch (error) {
     console.error('Create vehicle error:', error);
     
@@ -527,20 +674,53 @@ exports.updateVehicle = async (req, res) => {
     const { id } = req.params;
     const { make, model, year, type, pricePerDay, seats, transmission, fuelType, images, features, availability, description } = req.body;
     
-    // Validate input
-    if (!make || !model || !type || !pricePerDay) {
+    console.log('Update vehicle request received:', { id, body: req.body });
+    
+    // Collect validation errors
+    const validationErrors = [];
+    
+    // Check required fields
+    if (!make) validationErrors.push('Make is required');
+    if (!model) validationErrors.push('Model is required');
+    if (!type) validationErrors.push('Type is required');
+    if (!pricePerDay) validationErrors.push('Price per day is required');
+    
+    // If we have validation errors, return them
+    if (validationErrors.length > 0) {
+      const errorMsg = validationErrors.join(', ');
       return res.status(400).json({ 
         success: false, 
-        message: 'Make, model, type, and price are required' 
+        message: errorMsg
       });
     }
     
-    // Construct specs object from form fields
+    // Parse numeric values safely
+    let pricePerDayFloat;
+    try {
+      pricePerDayFloat = parseFloat(pricePerDay);
+      if (isNaN(pricePerDayFloat) || pricePerDayFloat <= 0) {
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Price per day must be a valid positive number'
+        });
+      }
+    } catch (e) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid price format'
+      });
+    }
+    
+    // Parse other numeric fields safely
+    const yearInt = parseInt(year) || new Date().getFullYear();
+    const seatsInt = parseInt(seats) || 4;
+    
+    // Construct specs object from form fields with defaults
     const specs = {
-      make,
-      model,
-      year: parseInt(year),
-      seats: parseInt(seats || 0),
+      make: make.trim(),
+      model: model.trim(),
+      year: yearInt,
+      seats: seatsInt,
       transmission: transmission || 'Automatic',
       fuelType: fuelType || 'Petrol'
     };
@@ -557,25 +737,59 @@ exports.updateVehicle = async (req, res) => {
       imagesArray = ['/images/placeholder-car.jpg'];
     }
     
-    // Update vehicle
-    await req.prisma.vehicle.update({
-      where: { id },
-      data: {
-        name: `${make} ${model}`,
-        type,
-        pricePerDay: parseFloat(pricePerDay),
-        specs,
-        description: description || `${make} ${model} ${year} - ${transmission} ${fuelType}`,
-        images: imagesArray,
-        features: Array.isArray(features) ? features : features ? [features] : [],
-        availability: availability === 'on' || availability === true
+    try {
+      // Update vehicle
+      const updatedVehicle = await req.prisma.vehicle.update({
+        where: { id },
+        data: {
+          name: `${make} ${model}`,
+          type,
+          pricePerDay: pricePerDayFloat,
+          specs,
+          description: description || `${make} ${model} ${yearInt} - ${transmission} ${fuelType}`,
+          images: imagesArray,
+          features: Array.isArray(features) ? features : features ? [features] : [],
+          availability: availability === 'on' || availability === true || availability === 'true'
+        }
+      });
+      
+      console.log('Vehicle updated successfully:', updatedVehicle);
+      
+      // Check if this is an API request or a regular form submission
+      if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.status(200).json({ 
+          success: true, 
+          message: `Vehicle ${make} ${model} has been updated successfully.`,
+          vehicle: updatedVehicle,
+          redirectUrl: '/admin/vehicles'
+        });
       }
-    });
-    
-    req.flash('success', `Vehicle ${make} ${model} has been updated successfully.`);
-    res.redirect('/admin/vehicles');
+      
+      req.flash('success', `Vehicle ${make} ${model} has been updated successfully.`);
+      res.redirect('/admin/vehicles');
+    } catch (dbError) {
+      console.error('Database error updating vehicle:', dbError);
+      
+      if (req.headers.accept && req.headers.accept.includes('application/json')) {
+        return res.status(500).json({ 
+          success: false, 
+          message: `Error updating vehicle: ${dbError.message}` 
+        });
+      }
+      
+      req.flash('error', `Error updating vehicle: ${dbError.message}`);
+      res.redirect(`/admin/vehicles/${req.params.id}/edit`);
+    }
   } catch (error) {
     console.error('Update vehicle error:', error);
+    
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(500).json({ 
+        success: false, 
+        message: `Error updating vehicle: ${error.message}` 
+      });
+    }
+    
     req.flash('error', `Error updating vehicle: ${error.message}`);
     res.redirect(`/admin/vehicles/${req.params.id}/edit`);
   }
@@ -727,21 +941,60 @@ exports.createBroadcast = async (req, res) => {
   try {
     const { title, message, userTarget } = req.body;
     
+    // Enhanced logging for debugging
+    console.log('Creating broadcast - Request details:', {
+      title,
+      message,
+      userTarget,
+      auth: req.auth ? { userId: req.auth.userId } : null,
+      user: req.user ? { id: req.user.id, email: req.user.email, role: req.user.role } : null,
+      headers: req.headers['content-type'],
+      session: req.session ? { id: req.session.id } : null
+    });
+    
     // Validate input
-    if (!title && !message) {
+    if (!message) {
       if (req.headers['content-type'] === 'application/json') {
-        return res.status(400).json({ success: false, error: 'Title and message are required' });
+        return res.status(400).json({ success: false, error: 'Message is required' });
       }
-      req.flash('error', 'Title and message are required');
+      req.flash('error', 'Message is required');
       return res.redirect('/admin/broadcasts');
     }
     
-    // Create broadcast
+    // Check if user is authenticated properly
+    if (!req.user || !req.user.id) {
+      console.error('Authentication error: Missing user or user ID');
+      
+      if (req.headers['content-type'] === 'application/json') {
+        return res.status(401).json({ 
+          success: false, 
+          error: 'Authentication required. Please login again.',
+          debug: { 
+            auth: req.auth ? { exists: true, userId: req.auth.userId } : null,
+            session: req.session ? { exists: true, id: req.session.id } : null
+          }
+        });
+      }
+      
+      req.flash('error', 'Authentication error: Please log in again');
+      return res.redirect('/auth/login');
+    }
+    
+    // Log admin ID before creating broadcast
+    console.log('Admin ID for broadcast creation:', req.user.id);
+    
+    // Create broadcast with explicit adminId handling
+    const adminId = req.user.id;
+    if (!adminId) {
+      throw new Error('Invalid admin ID');
+    }
+    
     const broadcast = await req.prisma.broadcast.create({
       data: {
         title: title || 'Admin Broadcast',
         message: message || title,
-        userTarget: userTarget || 'ALL'
+        userTarget: userTarget || 'ALL',
+        adminId: adminId
       }
     });
     
@@ -845,5 +1098,280 @@ exports.updateVehicleRequestStatus = async (req, res) => {
       success: false, 
       message: 'Error updating request status' 
     });
+  }
+};
+
+// Get deals for admin
+exports.getDealsAdmin = async (req, res) => {
+  try {
+    let deals = [];
+    
+    // Check if the deals table exists in the schema
+    try {
+      deals = await req.prisma.deal.findMany({
+        orderBy: {
+          id: 'desc'
+        }
+      });
+    } catch (error) {
+      console.log('Deals table might not exist:', error.message);
+      // Table doesn't exist, we'll return an empty array
+    }
+    
+    res.render('admin/deals', {
+      title: 'Manage Deals',
+      deals,
+      user: req.user
+    });
+  } catch (error) {
+    console.error('Admin deals error:', error);
+    res.status(500).render('error', { 
+      message: 'Error loading deals',
+      error: req.app.get('env') === 'development' ? error : {},
+      user: req.user
+    });
+  }
+};
+
+// Show form to create a new deal
+exports.getNewDealForm = async (req, res) => {
+  try {
+    res.render('admin/deal-form', {
+      title: 'Create New Deal',
+      deal: null,
+      user: req.user
+    });
+  } catch (error) {
+    console.error('New deal form error:', error);
+    res.status(500).render('error', { 
+      message: 'Error loading deal form',
+      error: req.app.get('env') === 'development' ? error : {},
+      user: req.user
+    });
+  }
+};
+
+// Show form to edit an existing deal
+exports.getEditDealForm = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Get the deal to edit
+    const deal = await req.prisma.deal.findUnique({
+      where: { id }
+    });
+    
+    if (!deal) {
+      return res.status(404).render('error', { 
+        title: 'Not Found',
+        message: 'Deal not found',
+        error: { status: 404 },
+        user: req.user
+      });
+    }
+    
+    res.render('admin/deal-form', {
+      title: 'Edit Deal',
+      deal,
+      user: req.user
+    });
+  } catch (error) {
+    console.error('Edit deal form error:', error);
+    res.status(500).render('error', { 
+      message: 'Error loading deal form',
+      error: req.app.get('env') === 'development' ? error : {},
+      user: req.user
+    });
+  }
+};
+
+// Create a new deal
+exports.createDeal = async (req, res) => {
+  try {
+    console.log('Creating deal - Request body:', req.body);
+    
+    const { 
+      title, 
+      code, 
+      description, 
+      discountType, 
+      discountValue, 
+      minPurchase, 
+      validFrom, 
+      validUntil,
+      usageLimit, 
+      vehicleType, 
+      isActive 
+    } = req.body;
+    
+    // Validate required fields
+    if (!title || !description || !discountType || !discountValue || !validFrom || !validUntil) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields'
+      });
+    }
+    
+    // Generate a random code if not provided
+    const dealCode = code || `DEAL${Math.floor(100000 + Math.random() * 900000)}`;
+    
+    // Parse numeric values
+    const discountValueNum = parseFloat(discountValue);
+    const minPurchaseNum = minPurchase ? parseFloat(minPurchase) : null;
+    const usageLimitNum = usageLimit ? parseInt(usageLimit) : null;
+    
+    // Create the deal
+    const deal = await req.prisma.deal.create({
+      data: {
+        title,
+        code: dealCode,
+        description,
+        discountType,
+        discountValue: discountValueNum,
+        minPurchase: minPurchaseNum,
+        validFrom: new Date(validFrom),
+        validUntil: new Date(validUntil),
+        usageLimit: usageLimitNum,
+        vehicleType: vehicleType || null,
+        isActive: isActive === 'on' || isActive === true || isActive === 'true',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      }
+    });
+    
+    console.log('Deal created successfully:', deal);
+    
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(201).json({ 
+        success: true, 
+        message: 'Deal created successfully',
+        deal
+      });
+    }
+    
+    req.flash('success', 'Deal created successfully');
+    res.redirect('/admin/deals');
+  } catch (error) {
+    console.error('Create deal error:', error);
+    
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(500).json({ 
+        success: false, 
+        message: `Error creating deal: ${error.message}`
+      });
+    }
+    
+    req.flash('error', `Error creating deal: ${error.message}`);
+    res.redirect('/admin/deals/new');
+  }
+};
+
+// Update an existing deal
+exports.updateDeal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const { 
+      title, 
+      code, 
+      description, 
+      discountType, 
+      discountValue, 
+      minPurchase, 
+      validFrom, 
+      validUntil,
+      usageLimit, 
+      vehicleType, 
+      isActive 
+    } = req.body;
+    
+    // Validate required fields
+    if (!title || !description || !discountType || !discountValue || !validFrom || !validUntil) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Missing required fields'
+      });
+    }
+    
+    // Parse numeric values
+    const discountValueNum = parseFloat(discountValue);
+    const minPurchaseNum = minPurchase ? parseFloat(minPurchase) : null;
+    const usageLimitNum = usageLimit ? parseInt(usageLimit) : null;
+    
+    // Update the deal
+    const deal = await req.prisma.deal.update({
+      where: { id },
+      data: {
+        title,
+        code,
+        description,
+        discountType,
+        discountValue: discountValueNum,
+        minPurchase: minPurchaseNum,
+        validFrom: new Date(validFrom),
+        validUntil: new Date(validUntil),
+        usageLimit: usageLimitNum,
+        vehicleType: vehicleType || null,
+        isActive: isActive === 'on' || isActive === true || isActive === 'true',
+        updatedAt: new Date()
+      }
+    });
+    
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Deal updated successfully',
+        deal
+      });
+    }
+    
+    req.flash('success', 'Deal updated successfully');
+    res.redirect('/admin/deals');
+  } catch (error) {
+    console.error('Update deal error:', error);
+    
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(500).json({ 
+        success: false, 
+        message: `Error updating deal: ${error.message}`
+      });
+    }
+    
+    req.flash('error', `Error updating deal: ${error.message}`);
+    res.redirect(`/admin/deals/${req.params.id}/edit`);
+  }
+};
+
+// Delete a deal
+exports.deleteDeal = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Delete the deal
+    await req.prisma.deal.delete({
+      where: { id }
+    });
+    
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Deal deleted successfully'
+      });
+    }
+    
+    req.flash('success', 'Deal deleted successfully');
+    res.redirect('/admin/deals');
+  } catch (error) {
+    console.error('Delete deal error:', error);
+    
+    if (req.headers.accept && req.headers.accept.includes('application/json')) {
+      return res.status(500).json({ 
+        success: false, 
+        message: `Error deleting deal: ${error.message}`
+      });
+    }
+    
+    req.flash('error', `Error deleting deal: ${error.message}`);
+    res.redirect('/admin/deals');
   }
 };

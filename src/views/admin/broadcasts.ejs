@@ -17,6 +17,14 @@
           </a>
         </li>
         <li>
+          <a href="/admin/stats" class="flex items-center px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-md">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Statistics
+          </a>
+        </li>
+        <li>
           <a href="/admin/vehicles" class="flex items-center px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-md">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
@@ -60,10 +68,22 @@
       <!-- Create Broadcast Form -->
       <div class="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 class="text-lg font-semibold mb-4">Create New Broadcast</h2>
-        <form id="broadcast-form" class="space-y-4">
+        <form id="broadcast-form" action="/admin/broadcasts" method="POST" class="space-y-4">
+          <div>
+            <label for="title" class="block text-sm font-medium text-gray-700">Title</label>
+            <input type="text" id="title" name="title" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" placeholder="Announcement Title">
+          </div>
           <div>
             <label for="message" class="block text-sm font-medium text-gray-700">Broadcast Message</label>
-            <textarea id="message" name="message" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50"></textarea>
+            <textarea id="message" name="message" rows="3" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50" required></textarea>
+          </div>
+          <div>
+            <label for="userTarget" class="block text-sm font-medium text-gray-700">Target Users</label>
+            <select id="userTarget" name="userTarget" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring focus:ring-blue-500 focus:ring-opacity-50">
+              <option value="ALL">All Users</option>
+              <option value="USER">Regular Users Only</option>
+              <option value="ADMIN">Admins Only</option>
+            </select>
           </div>
           <div class="flex justify-end">
             <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
@@ -126,12 +146,20 @@
   document.getElementById('broadcast-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     
+    const title = document.getElementById('title').value;
     const message = document.getElementById('message').value;
+    const userTarget = document.getElementById('userTarget').value;
     
     if (!message) {
       alert('Please enter a broadcast message');
       return;
     }
+    
+    // Show loading state
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerText;
+    submitBtn.innerText = 'Sending...';
+    submitBtn.disabled = true;
     
     try {
       const response = await fetch('/admin/broadcasts', {
@@ -139,17 +167,23 @@
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message }),
+        body: JSON.stringify({ 
+          title, 
+          message, 
+          userTarget 
+        }),
       });
       
       const data = await response.json();
       
       if (data.success) {
-        // Manually trigger socket event
-        socket.emit('admin-broadcast', { message });
-        
+        // Show success message
         alert('Broadcast sent successfully');
+        
+        // Reset form
+        document.getElementById('title').value = '';
         document.getElementById('message').value = '';
+        document.getElementById('userTarget').value = 'ALL';
         
         // Add the new broadcast to the table without reloading the page
         const table = document.querySelector('tbody');
@@ -175,11 +209,15 @@
         
         table.prepend(newRow);
       } else {
-        alert(`Error: ${data.message || 'Could not send broadcast'}`);
+        alert(`Error: ${data.error || data.message || 'Could not send broadcast'}`);
       }
     } catch (error) {
       console.error('Error sending broadcast:', error);
       alert('Failed to send broadcast. Please try again.');
+    } finally {
+      // Reset button state
+      submitBtn.innerText = originalText;
+      submitBtn.disabled = false;
     }
   });
 </script>

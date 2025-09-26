@@ -61,19 +61,29 @@ model Review {
 }
 
 model Deal {
-  id              String   @id @default(uuid())
-  title           String
-  description     String
-  discountPercent Float
-  validUntil      DateTime
-  createdAt       DateTime @default(now())
+  id            String   @id @default(uuid())
+  title         String
+  code          String   @unique
+  description   String
+  discountType  String   @default("percentage") // percentage or fixed
+  discountValue Float
+  minPurchase   Float?
+  validFrom     DateTime
+  validUntil    DateTime
+  usageLimit    Int?
+  vehicleType   String?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 
 model Broadcast {
-  id        String   @id @default(uuid())
-  adminId   String
-  message   String
-  createdAt DateTime @default(now())
+  id         String   @id @default(uuid())
+  adminId    String
+  title      String
+  message    String
+  userTarget String   @default("ALL")
+  createdAt  DateTime @default(now())
 }
 
 model VehicleRequest {
