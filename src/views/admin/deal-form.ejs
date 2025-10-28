@@ -9,6 +9,8 @@
     
     <div class="bg-white rounded-lg shadow-md p-6">
       <form id="dealForm" action="<%= deal ? `/admin/deals/${deal.id}` : '/admin/deals' %>" method="POST">
+        <!-- Hidden CSRF token -->
+        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
         <!-- Hidden method field for PUT requests when editing -->
         <% if (deal) { %>
           <input type="hidden" name="_method" value="PUT">

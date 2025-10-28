@@ -3,6 +3,9 @@ const router = express.Router();
 const bookingController = require('../controllers/bookingController');
 const { requireAuth } = require('../middleware/authMiddleware');
 
+// Show booking form
+router.get('/create', requireAuth, bookingController.getBookingForm);
+
 // Create a new booking
 router.post('/', requireAuth, bookingController.createBooking);
 

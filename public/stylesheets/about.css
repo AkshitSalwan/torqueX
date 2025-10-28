@@ -1,0 +1,114 @@
+body {
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(to bottom right, #f8fafc, #eef2ff);
+  color: #1e293b;
+  scroll-behavior: smooth;
+}
+
+h1, h2, h3 {
+  letter-spacing: 0.5px;
+}
+
+.container {
+  max-width: 1200px;
+}
+
+img:hover {
+  transform: scale(1.02);
+  transition: transform 0.4s ease;
+}
+
+.bg-white {
+  background-color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+.bg-white:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 20px rgba(0, 0, 0, 0.08);
+}
+
+.grid .bg-white {
+  border: 1px solid #e2e8f0;
+}
+
+.grid .bg-white:hover {
+  border-color: #3b82f6;
+}
+
+.grid img {
+  transition: all 0.3s ease-in-out;
+}
+
+.grid img:hover {
+  transform: scale(1.05);
+}
+
+.text-center h1,
+.text-center h2 {
+  position: relative;
+  display: inline-block;
+  padding-bottom: 0.3rem;
+}
+
+.text-center h2::after,
+.text-center h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 3px;
+  background-color: #3b82f6;
+  border-radius: 5px;
+}
+
+.bg-blue-50 {
+  background: linear-gradient(to right, #e0f2fe, #f0f9ff);
+}
+
+svg {
+  stroke-width: 2px;
+}
+
+.grid .p-3 {
+  transition: all 0.3s ease;
+}
+.grid .p-3:hover {
+  background-color: #eff6ff;
+  transform: translateY(-3px);
+}
+
+ul li {
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+ul li:hover {
+  background-color: #f1f5f9;
+  transform: translateX(3px);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.container > * {
+  animation: fadeIn 0.8s ease forwards;
+}
+
+footer {
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 2rem 0;
+}
+
+footer a {
+  color: #93c5fd;
+  transition: color 0.3s ease;
+}
+
+footer a:hover {
+  color: #3b82f6;
+}

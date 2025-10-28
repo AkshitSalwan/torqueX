@@ -10,6 +10,9 @@ const flash = require('connect-flash');
 const session = require('express-session');
 const methodOverride = require('method-override');
 
+// Import security middleware
+const securityMiddleware = require('./src/middleware/securityMiddleware');
+
 // Import routes
 const indexRouter = require('./src/routes/indexRoutes');
 const authRouter = require('./src/routes/authRoutes');
@@ -20,6 +23,7 @@ const adminRouter = require('./src/routes/adminRoutes');
 const dealRouter = require('./src/routes/dealRoutes');
 const testRouter = require('./src/routes/testRoutes');
 const userRouter = require('./src/routes/userRoutes');
+const webhookRouter = require('./src/routes/webhookRoutes');
 
 // Initialize Prisma
 const prisma = new PrismaClient();
@@ -32,6 +36,11 @@ const app = express();
 // view engine setup
 app.set('views', path.join(__dirname, 'src/views'));
 app.set('view engine', 'ejs');
+
+// ===== Security Middleware (apply first for maximum protection) =====
+app.use(securityMiddleware.securityHeaders);           // Set security headers
+app.use(securityMiddleware.preventSQLInjection);       // Prevent SQL injection
+app.use(securityMiddleware.requestLogging);            // Log all requests
 
 app.use(logger('dev'));
 app.use(express.json());
@@ -47,10 +56,17 @@ app.use(session({
   saveUninitialized: true,
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: 'strict',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 }));
 app.use(flash());
+
+// ===== Additional Security Middleware =====
+app.use(securityMiddleware.sanitizeInput);             // Sanitize user input
+app.use(securityMiddleware.csrfProtection);            // CSRF protection
+app.use(securityMiddleware.verifyDataIntegrity);       // Verify data integrity
 
 // Make Prisma and Clerk available in all routes
 app.use((req, res, next) => {
@@ -84,6 +100,7 @@ app.use('/admin', adminRouter);
 app.use('/deals', dealRouter);
 app.use('/test', testRouter);
 app.use('/user', userRouter);
+app.use('/webhooks', webhookRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {

@@ -129,7 +129,7 @@
             <div class="bg-white rounded-lg shadow-md overflow-hidden">
               <div class="h-48 overflow-hidden">
                 <img 
-                  src="<%= vehicle.imageUrl %>" 
+                  src="<%= vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : '/images/placeholder-car.jpg' %>" 
                   alt="<%= vehicle.name %>" 
                   class="w-full h-full object-cover"
                   onerror="this.src='/images/placeholder-car.jpg'; this.onerror=null;"

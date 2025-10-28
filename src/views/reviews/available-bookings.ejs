@@ -12,8 +12,8 @@
               <div class="flex items-center">
                 <div class="h-20 w-20 rounded-md flex-shrink-0 overflow-hidden">
                   <img 
-                    src="<%= booking.vehicle.imageUrl %>" 
-                    alt="<%= booking.vehicle.make %> <%= booking.vehicle.model %>" 
+                    src="<%= booking.vehicle.images && booking.vehicle.images.length > 0 ? booking.vehicle.images[0] : '/images/placeholder-car.jpg' %>" 
+                    alt="<%= booking.vehicle.name %>" 
                     class="h-full w-full object-cover"
                     onerror="this.src='/images/placeholder-car.jpg'; this.onerror=null;"
                   >

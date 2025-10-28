@@ -3,32 +3,24 @@
  * Handles booking creation, status updates, and viewing
  */
 
-// Create a new booking
-exports.createBooking = async (req, res) => {
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const validators = require('../utils/validators');
+const logger = require('../utils/logger');
+const crypto = require('../utils/crypto');
+
+// Show booking form
+exports.getBookingForm = async (req, res) => {
   try {
-    const { vehicleId, startDate, endDate } = req.body;
-    const userId = req.user.id;
+    const { vehicleId } = req.query;
     
-    // Validate dates
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    if (start >= end) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'End date must be after start date' 
+    if (!vehicleId) {
+      return res.status(400).render('error', {
+        title: 'Error',
+        message: 'Vehicle ID is required',
+        error: { status: 400 },
+        user: req.user || null
       });
     }
-    
-    if (start < new Date()) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Start date cannot be in the past' 
-      });
-    }
-    
-    // Calculate rental duration in days
-    const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
     
     // Get vehicle details
     const vehicle = await req.prisma.vehicle.findUnique({
@@ -36,6 +28,77 @@ exports.createBooking = async (req, res) => {
     });
     
     if (!vehicle) {
+      return res.status(404).render('error', {
+        title: 'Not Found',
+        message: 'Vehicle not found',
+        error: { status: 404 },
+        user: req.user || null
+      });
+    }
+    
+    if (!vehicle.availability) {
+      return res.status(400).render('error', {
+        title: 'Not Available',
+        message: 'Vehicle is not available for booking',
+        error: { status: 400 },
+        user: req.user || null
+      });
+    }
+    
+    res.render('bookings/form', {
+      title: 'Book Vehicle',
+      vehicle,
+      vehicleId,
+      csrfToken: req.session.csrfToken,
+      user: req.user || null
+    });
+  } catch (error) {
+    console.error('Get booking form error:', error);
+    res.status(500).render('error', {
+      title: 'Error',
+      message: 'Error loading booking form',
+      error: req.app.get('env') === 'development' ? error : {},
+      user: req.user || null
+    });
+  }
+};
+
+// Create a new booking
+exports.createBooking = async (req, res) => {
+  try {
+    const { vehicleId, startDate, endDate } = req.body;
+    const userId = req.user.id;
+    
+    // Validate booking data
+    const validation = validators.validateBookingData({
+      vehicleId,
+      startDate,
+      endDate
+    });
+    
+    if (!validation.valid) {
+      logger.warn('Booking validation failed', {
+        userId,
+        vehicleId,
+        errors: validation.errors
+      });
+      return res.status(400).json({ 
+        success: false, 
+        message: validation.errors.join(', ') 
+      });
+    }
+    
+    // Validate dates
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Get vehicle details
+    const vehicle = await req.prisma.vehicle.findUnique({
+      where: { id: vehicleId }
+    });
+    
+    if (!vehicle) {
+      logger.warn('Vehicle not found', { vehicleId });
       return res.status(404).json({ 
         success: false, 
         message: 'Vehicle not found' 
@@ -43,6 +106,7 @@ exports.createBooking = async (req, res) => {
     }
     
     if (!vehicle.availability) {
+      logger.info('Vehicle unavailable', { vehicleId });
       return res.status(400).json({ 
         success: false, 
         message: 'Vehicle is not available for booking' 
@@ -70,11 +134,19 @@ exports.createBooking = async (req, res) => {
     });
     
     if (overlappingBooking) {
+      logger.info('Overlapping booking found', {
+        vehicleId,
+        requestedStart: startDate,
+        requestedEnd: endDate
+      });
       return res.status(400).json({ 
         success: false, 
         message: 'Vehicle is already booked for the selected dates' 
       });
     }
+    
+    // Calculate rental duration in days
+    const duration = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
     
     // Calculate total price
     const totalPrice = vehicle.pricePerDay * duration;
@@ -91,6 +163,8 @@ exports.createBooking = async (req, res) => {
       }
     });
     
+    logger.logBookingCreated(booking.id, userId, vehicleId);
+    
     // Redirect to payment page or booking summary
     res.status(200).json({ 
       success: true, 
@@ -98,7 +172,7 @@ exports.createBooking = async (req, res) => {
       redirectUrl: `/bookings/${booking.id}/payment` 
     });
   } catch (error) {
-    console.error('Create booking error:', error);
+    logger.logError('createBooking', error);
     res.status(500).json({ 
       success: false, 
       message: 'Error creating booking' 
@@ -163,11 +237,13 @@ exports.processPayment = async (req, res) => {
     const booking = await req.prisma.booking.findUnique({
       where: { id },
       include: {
-        vehicle: true
+        vehicle: true,
+        user: true
       }
     });
     
     if (!booking) {
+      logger.warn('Booking not found for payment', { bookingId: id });
       return res.status(404).json({ 
         success: false, 
         message: 'Booking not found' 
@@ -175,30 +251,83 @@ exports.processPayment = async (req, res) => {
     }
     
     if (booking.userId !== req.user.id) {
+      logger.warn('Unauthorized payment attempt', {
+        bookingId: id,
+        userId: req.user.id,
+        bookingUserId: booking.userId
+      });
       return res.status(403).json({ 
         success: false, 
         message: 'Unauthorized' 
       });
     }
     
-    // In a real app, process payment with Stripe here
-    // For demo purposes, just mark as confirmed
-    
-    // Update booking status
-    const updatedBooking = await req.prisma.booking.update({
-      where: { id },
-      data: {
-        status: 'CONFIRMED'
+    try {
+      // Create Stripe payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: Math.round(booking.totalPrice * 100), // Convert to cents
+        currency: 'usd',
+        payment_method: paymentMethodId,
+        confirm: true,
+        metadata: {
+          bookingId: booking.id,
+          vehicleId: booking.vehicleId,
+          userId: booking.userId,
+          vehicleName: booking.vehicle.name
+        },
+        description: `Booking for ${booking.vehicle.name} - ${new Date(booking.startDate).toLocaleDateString()} to ${new Date(booking.endDate).toLocaleDateString()}`
+      });
+
+      if (paymentIntent.status === 'succeeded') {
+        // Encrypt sensitive payment method details
+        const encryptedPaymentMethod = crypto.encryptField(paymentMethodId);
+        
+        // Update booking status to CONFIRMED with encrypted payment method
+        const updatedBooking = await req.prisma.booking.update({
+          where: { id },
+          data: {
+            status: 'CONFIRMED',
+            paymentIntentId: paymentIntent.id,
+            paymentMethod: encryptedPaymentMethod
+          }
+        });
+
+        logger.logPaymentProcessed(id, booking.totalPrice, 'succeeded');
+
+        // TODO: Send confirmation email
+
+        return res.status(200).json({ 
+          success: true, 
+          booking: updatedBooking, 
+          redirectUrl: `/bookings/${id}/confirmation`,
+          paymentIntentId: paymentIntent.id
+        });
+      } else if (paymentIntent.status === 'requires_action') {
+        logger.info('Payment requires additional action', { bookingId: id });
+        return res.status(400).json({ 
+          success: false, 
+          message: 'Payment requires additional action',
+          client_secret: paymentIntent.client_secret
+        });
+      } else {
+        logger.warn('Payment failed', {
+          bookingId: id,
+          status: paymentIntent.status
+        });
+        return res.status(400).json({ 
+          success: false, 
+          message: `Payment failed with status: ${paymentIntent.status}`
+        });
       }
-    });
-    
-    res.status(200).json({ 
-      success: true, 
-      booking: updatedBooking, 
-      redirectUrl: `/bookings/${id}/confirmation` 
-    });
+    } catch (stripeError) {
+      logger.logPaymentFailed(id, stripeError);
+      return res.status(400).json({ 
+        success: false, 
+        message: stripeError.message || 'Payment processing failed'
+      });
+    }
   } catch (error) {
-    console.error('Process payment error:', error);
+    logger.logError('processPayment', error);
     res.status(500).json({ 
       success: false, 
       message: 'Error processing payment' 

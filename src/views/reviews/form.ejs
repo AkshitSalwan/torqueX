@@ -8,8 +8,8 @@
       <div class="flex items-center">
         <div class="h-16 w-16 rounded-md flex-shrink-0 overflow-hidden">
           <img 
-            src="<%= vehicle.imageUrl %>" 
-            alt="<%= vehicle.make %> <%= vehicle.model %>" 
+            src="<%= vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : '/images/placeholder-car.jpg' %>" 
+            alt="<%= vehicle.name %>" 
             class="h-full w-full object-cover"
             onerror="this.src='/images/placeholder-car.jpg'; this.onerror=null;"
           >
@@ -26,6 +26,7 @@
     </div>
     
     <form action="/reviews<%= review ? `/${review.id}` : '' %>" method="POST" class="space-y-6">
+      <input type="hidden" name="_csrf" value="<%= csrfToken %>">
       <input type="hidden" name="bookingId" value="<%= booking.id %>">
       
       <div>

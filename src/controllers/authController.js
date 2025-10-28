@@ -3,6 +3,9 @@
  * Handles user authentication using Clerk
  */
 
+const crypto = require('../utils/crypto');
+const logger = require('../utils/logger');
+
 // Login page controller
 exports.getLoginPage = (req, res) => {
   // If user is already logged in, redirect to dashboard
@@ -84,18 +87,29 @@ exports.handleAuthCallback = async (req, res) => {
           // Generate a unique ID for manual authentication
           const manualClerkId = `manual-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
           
-          console.log('Creating new user with email:', authData.email);
+          // Hash the password for secure storage
+          const { hash: passwordHash, salt: passwordSalt } = await crypto.hashPassword(authData.password);
+          
+          logger.info('Creating new user account', { email: authData.email });
           
           const newUser = await req.prisma.user.create({
             data: {
               clerkId: manualClerkId,
               name: authData.name || authData.email.split('@')[0],
               email: authData.email,
-              role: 'USER'
+              role: 'USER',
+              // Store password hash and salt securely
+              ...(authData.password && {
+                passwordHash,
+                passwordSalt
+              })
             }
           });
           
-          console.log('User created successfully:', newUser);
+          logger.info('User account created successfully', { 
+            userId: newUser.id, 
+            email: newUser.email 
+          });
           
           // Simulate authentication by adding user to session
           req.session.userId = newUser.id;
@@ -106,7 +120,7 @@ exports.handleAuthCallback = async (req, res) => {
           return new Promise((resolve) => {
             req.session.save(err => {
               if (err) {
-                console.error('Error saving session:', err);
+                logger.error('Session save error', { error: err.message });
               }
               req.flash('success', 'Account created successfully! Welcome to TorqueX.');
               res.redirect('/user/dashboard');
@@ -114,36 +128,60 @@ exports.handleAuthCallback = async (req, res) => {
             });
           });
         } catch (error) {
-          console.error('Error creating fallback user:', error);
+          logger.error('User account creation failed', { error: error.message });
           req.flash('error', `Failed to create account: ${error.message}`);
           return res.redirect('/auth/signup');
         }
       } else {
         // This is a login - authenticate existing user
-        console.log('User found, logging in:', existingUser.email);
-        
-        // Simulate authentication by adding user to session
-        req.session.userId = existingUser.id;
-        req.session.userEmail = existingUser.email;
-        req.session.manualAuth = true;
-        
-        // Save session explicitly and return immediately to prevent further execution
-        return new Promise((resolve) => {
-          req.session.save(err => {
-            if (err) {
-              console.error('Error saving session:', err);
-            }
-            req.flash('success', 'Welcome back to TorqueX!');
+        try {
+          // Verify password if it's a fallback authentication
+          if (existingUser.passwordHash && existingUser.passwordSalt) {
+            const isPasswordValid = await crypto.verifyPassword(
+              authData.password,
+              existingUser.passwordHash,
+              existingUser.passwordSalt
+            );
             
-            // Redirect based on user role
-            if (existingUser.role === 'ADMIN') {
-              res.redirect('/admin/dashboard');
-            } else {
-              res.redirect('/user/dashboard');
+            if (!isPasswordValid) {
+              logger.warn('Failed login attempt - invalid password', { email: authData.email });
+              req.flash('error', 'Invalid email or password');
+              return res.redirect('/auth/login');
             }
-            resolve();
+          }
+          
+          logger.info('User authenticated successfully', { 
+            userId: existingUser.id,
+            email: existingUser.email 
           });
-        });
+          
+          // Simulate authentication by adding user to session
+          req.session.userId = existingUser.id;
+          req.session.userEmail = existingUser.email;
+          req.session.manualAuth = true;
+          
+          // Save session explicitly and return immediately to prevent further execution
+          return new Promise((resolve) => {
+            req.session.save(err => {
+              if (err) {
+                logger.error('Session save error', { error: err.message });
+              }
+              req.flash('success', 'Welcome back to TorqueX!');
+              
+              // Redirect based on user role
+              if (existingUser.role === 'ADMIN') {
+                res.redirect('/admin/dashboard');
+              } else {
+                res.redirect('/user/dashboard');
+              }
+              resolve();
+            });
+          });
+        } catch (error) {
+          logger.error('User authentication failed', { error: error.message });
+          req.flash('error', 'Authentication failed. Please try again.');
+          return res.redirect('/auth/login');
+        }
       }
     }
     

@@ -3,6 +3,9 @@
  * Handles user dashboard and profile
  */
 
+const crypto = require('../utils/crypto');
+const logger = require('../utils/logger');
+
 // Get user dashboard
 exports.getDashboard = async (req, res) => {
   try {
@@ -183,14 +186,21 @@ exports.getProfile = async (req, res) => {
       where: { id: userId }
     });
     
+    // Decrypt sensitive fields for display
+    const decryptedUser = {
+      ...user,
+      phone: user.phone ? crypto.decryptField(user.phone) : null,
+      address: user.address ? crypto.decryptField(user.address) : null
+    };
+    
     res.render('user/profile', { 
       title: 'My Profile',
-      user,
+      user: decryptedUser,
       successMessage: req.flash('success'),
       errorMessage: req.flash('error')
     });
   } catch (error) {
-    console.error('Profile error:', error);
+    logger.error('Profile retrieval failed', { error: error.message });
     res.status(500).render('error', { 
       title: 'Error',
       message: 'Error loading profile',
@@ -206,22 +216,54 @@ exports.updateProfile = async (req, res) => {
     const userId = req.user.id;
     const { name, phone, address } = req.body;
     
-    // Update user details
-    await req.prisma.user.update({
+    logger.info('User profile update initiated', { userId });
+    
+    // Encrypt sensitive fields
+    const encryptedPhone = phone ? crypto.encryptField(phone) : null;
+    const encryptedAddress = address ? crypto.encryptField(address) : null;
+    
+    // Update user details with encrypted sensitive data
+    const updatedUser = await req.prisma.user.update({
       where: { id: userId },
       data: {
         name,
-        phone,
-        address
+        phone: encryptedPhone,
+        address: encryptedAddress
       }
+    });
+    
+    logger.info('User profile updated successfully', { 
+      userId,
+      fields: ['name', 'phone', 'address']
     });
     
     req.flash('success', 'Profile updated successfully');
     res.redirect('/user/profile');
   } catch (error) {
-    console.error('Update profile error:', error);
+    logger.error('Profile update failed', { error: error.message });
     req.flash('error', 'Failed to update profile');
     res.redirect('/user/profile');
+  }
+};
+
+// Get user profile with decrypted data
+exports.getProfileDecrypted = async (userId) => {
+  try {
+    const user = await req.prisma.user.findUnique({
+      where: { id: userId }
+    });
+    
+    if (!user) return null;
+    
+    // Decrypt sensitive fields for display
+    return {
+      ...user,
+      phone: user.phone ? crypto.decryptField(user.phone) : null,
+      address: user.address ? crypto.decryptField(user.address) : null
+    };
+  } catch (error) {
+    logger.error('Profile decryption failed', { error: error.message });
+    return null;
   }
 };
 

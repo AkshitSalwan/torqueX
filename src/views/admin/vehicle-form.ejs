@@ -100,6 +100,7 @@
       <!-- Vehicle Form -->
       <div class="bg-white rounded-lg shadow overflow-hidden">
         <form method="POST" action="<%= vehicle ? `/admin/vehicles/${vehicle.id}` : '/admin/vehicles' %>" class="p-6" enctype="multipart/form-data">
+          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
           <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
             <!-- Vehicle Basic Info -->
             <div class="sm:col-span-3">
@@ -273,9 +274,9 @@
                 Vehicle Image
               </label>
               <div class="mt-1 flex items-center">
-                <% if (vehicle && vehicle.imageUrl) { %>
+                <% if (vehicle && vehicle.images && vehicle.images.length > 0) { %>
                   <div class="mr-4">
-                    <img src="<%= vehicle.imageUrl %>" alt="<%= vehicle.make %> <%= vehicle.model %>" class="h-32 w-32 object-cover rounded-md">
+                    <img src="<%= vehicle.images[0] %>" alt="<%= vehicle.name %>" class="h-32 w-32 object-cover rounded-md">
                   </div>
                 <% } %>
                 <input 

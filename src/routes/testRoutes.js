@@ -6,6 +6,11 @@
 const express = require('express');
 const router = express.Router();
 
+// Test hello endpoint
+router.get('/hello', (req, res) => {
+  res.json({ message: 'Hello from TorqueX API' });
+});
+
 // Test 404 error
 router.get('/test-404', (req, res) => {
   const err = new Error('Test 404 Error');

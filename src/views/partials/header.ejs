@@ -10,10 +10,12 @@
   <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
+      // Suppress Clerk errors - optional authentication
+      window.ClerkSuppressError = true;
+      
       // Ensure we have a valid Clerk key - use this fallback key for development
       // In production, this would be passed from environment variables
       const publishableKey = 'pk_test_bW9kZXN0LWJlYWdsZS0zMC5jbGVyay5hY2NvdW50cy5kZXYk';
-      console.log('Initializing Clerk with key:', publishableKey.substring(0, 10) + '...');
       
       try {
         if (window.Clerk) {
@@ -23,16 +25,15 @@
             console.log('Clerk initialized successfully');
             document.dispatchEvent(new Event('clerkLoaded'));
           }).catch(function(error) {
-            console.error('Error initializing Clerk:', error);
-            // Fallback to traditional auth in case of Clerk error
+            // Silently fail - fallback to traditional auth
             document.dispatchEvent(new Event('clerkFailed'));
           });
         } else {
-          console.warn('Clerk object not available, using fallback authentication');
+          // Silently use fallback authentication
           document.dispatchEvent(new Event('clerkFailed'));
         }
       } catch (error) {
-        console.error('Critical error initializing auth:', error);
+        // Silently handle errors
         document.dispatchEvent(new Event('clerkFailed'));
       }
     });

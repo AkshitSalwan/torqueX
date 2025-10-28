@@ -3,6 +3,15 @@ const router = express.Router();
 const reviewController = require('../controllers/reviewController');
 const { requireAuth } = require('../middleware/authMiddleware');
 
+// Get all reviews (public)
+router.get('/', (req, res) => {
+  res.render('reviews/list', { 
+    title: 'Vehicle Reviews',
+    reviews: [],
+    message: 'Reviews will be displayed here'
+  });
+});
+
 // Get general review form (shows available bookings)
 router.get('/form', requireAuth, reviewController.getGeneralReviewForm);
 

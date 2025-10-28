@@ -125,3 +125,53 @@ exports.getVehicleById = async (req, res) => {
     });
   }
 };
+
+// Get booking form for a vehicle
+exports.getBookingForm = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if user is authenticated
+    if (!req.user) {
+      return res.redirect(`/auth/login?redirect=/vehicles/${id}/book`);
+    }
+    
+    // Get vehicle details
+    const vehicle = await req.prisma.vehicle.findUnique({
+      where: { id }
+    });
+    
+    if (!vehicle) {
+      return res.status(404).render('error', { 
+        title: 'Not Found',
+        message: 'Vehicle not found',
+        error: { status: 404 },
+        user: req.user
+      });
+    }
+    
+    if (!vehicle.availability) {
+      return res.status(400).render('error', { 
+        title: 'Unavailable',
+        message: 'This vehicle is currently not available for booking',
+        error: { status: 400 },
+        user: req.user
+      });
+    }
+    
+    res.render('bookings/form', { 
+      title: 'Book ' + vehicle.name,
+      vehicle,
+      vehicleId: id,
+      user: req.user
+    });
+  } catch (error) {
+    console.error('Get booking form error:', error);
+    res.status(500).render('error', { 
+      title: 'Error',
+      message: 'Error loading booking form',
+      error: req.app.get('env') === 'development' ? error : {},
+      user: req.user
+    });
+  }
+};

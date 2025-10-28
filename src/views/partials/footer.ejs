@@ -5,8 +5,11 @@
   
 <script>
   <% if (typeof user !== 'undefined' && user) { %>
-    const socket = window.socket || io();
-    if (!window.socket) window.socket = socket;
+    // Initialize Socket.io if not already done
+    if (!window.socket) {
+      window.socket = io();
+    }
+    const socket = window.socket;
 
     // Authenticate user with socket
     socket.emit('authenticate', {

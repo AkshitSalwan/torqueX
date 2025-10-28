@@ -849,7 +849,7 @@ exports.getBookingsAdmin = async (req, res) => {
       skip,
       take: limit,
       orderBy: {
-        createdAt: 'desc'
+        startDate: 'desc'
       },
       include: {
         user: true,

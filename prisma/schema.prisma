@@ -13,6 +13,10 @@ model User {
   name            String
   email           String           @unique
   role            Role             @default(USER)
+  phone           String?          // Encrypted field
+  address         String?          // Encrypted field
+  passwordHash    String?          // For fallback authentication
+  passwordSalt    String?          // For fallback authentication
   createdAt       DateTime         @default(now())
   bookings        Booking[]
   reviews         Review[]
@@ -35,16 +39,19 @@ model Vehicle {
 }
 
 model Booking {
-  id         String   @id @default(uuid())
-  userId     String
-  vehicleId  String
-  startDate  DateTime
-  endDate    DateTime
-  status     Status   @default(PENDING)
-  totalPrice Float
-  user       User     @relation(fields: [userId], references: [id])
-  vehicle    Vehicle  @relation(fields: [vehicleId], references: [id])
-  reviews    Review[]
+  id              String   @id @default(uuid())
+  userId          String
+  vehicleId       String
+  startDate       DateTime
+  endDate         DateTime
+  status          Status   @default(PENDING)
+  totalPrice      Float
+  paymentIntentId String?  // Stripe payment intent ID
+  paymentMethod   String?  // Encrypted payment method details
+  promoCode       String?  // Applied promo code (not hashed for user reference)
+  user            User     @relation(fields: [userId], references: [id])
+  vehicle         Vehicle  @relation(fields: [vehicleId], references: [id])
+  reviews         Review[]
 }
 
 model Review {
@@ -64,6 +71,7 @@ model Deal {
   id            String   @id @default(uuid())
   title         String
   code          String   @unique
+  codeHash      String   @unique        // SHA256 hash of promo code for security
   description   String
   discountType  String   @default("percentage") // percentage or fixed
   discountValue Float
@@ -71,6 +79,7 @@ model Deal {
   validFrom     DateTime
   validUntil    DateTime
   usageLimit    Int?
+  currentUsage  Int      @default(0)   // Track usage count
   vehicleType   String?
   isActive      Boolean  @default(true)
   createdAt     DateTime @default(now())
