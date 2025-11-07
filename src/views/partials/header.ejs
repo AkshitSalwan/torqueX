@@ -7,37 +7,36 @@
   <link rel="stylesheet" href="/stylesheets/style.css">
   <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <!-- Clerk Authentication -->
+  <% if (typeof clerkPublishableKey !== 'undefined' && clerkPublishableKey && clerkPublishableKey.length > 0) { %>
   <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      // Suppress Clerk errors - optional authentication
-      window.ClerkSuppressError = true;
+      // Get Clerk publishable key from server
+      const publishableKey = '<%= clerkPublishableKey %>';
       
-      // Ensure we have a valid Clerk key - use this fallback key for development
-      // In production, this would be passed from environment variables
-      const publishableKey = 'pk_test_bW9kZXN0LWJlYWdsZS0zMC5jbGVyay5hY2NvdW50cy5kZXYk';
-      
-      try {
-        if (window.Clerk) {
-          window.Clerk.load({ 
-            publishableKey: publishableKey
-          }).then(function() {
-            console.log('Clerk initialized successfully');
-            document.dispatchEvent(new Event('clerkLoaded'));
-          }).catch(function(error) {
-            // Silently fail - fallback to traditional auth
-            document.dispatchEvent(new Event('clerkFailed'));
-          });
-        } else {
-          // Silently use fallback authentication
+      // Initialize Clerk with the provided key
+      if (window.Clerk && publishableKey) {
+        window.Clerk.load({ 
+          publishableKey: publishableKey
+        }).then(function() {
+          console.log('Clerk initialized successfully');
+          document.dispatchEvent(new Event('clerkLoaded'));
+        }).catch(function(error) {
+          console.log('Clerk initialization failed, using fallback auth');
           document.dispatchEvent(new Event('clerkFailed'));
-        }
-      } catch (error) {
-        // Silently handle errors
-        document.dispatchEvent(new Event('clerkFailed'));
+        });
       }
     });
   </script>
+  <% } else { %>
+  <script>
+    // No Clerk key configured - use fallback authentication only
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log('Using fallback authentication (Clerk not configured)');
+      document.dispatchEvent(new Event('clerkFailed'));
+    });
+  </script>
+  <% } %>
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col">

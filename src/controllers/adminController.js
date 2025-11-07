@@ -1,4 +1,5 @@
 const { PrismaClient } = require('@prisma/client');
+const { deleteCachePattern } = require('../utils/redis');
 
 // Dashboard
 exports.getDashboard = async (req, res) => {
@@ -589,6 +590,9 @@ exports.createVehicle = async (req, res) => {
       
       console.log('Vehicle created successfully:', vehicle);
       
+      // Invalidate all vehicle caches since a new vehicle was added
+      await deleteCachePattern('vehicles:*');
+      
       // Handle different response types
       if (req.headers.accept && req.headers.accept.includes('application/json')) {
         return res.status(201).json({ 
@@ -755,6 +759,9 @@ exports.updateVehicle = async (req, res) => {
       
       console.log('Vehicle updated successfully:', updatedVehicle);
       
+      // Invalidate all vehicle caches since vehicle data was modified
+      await deleteCachePattern('vehicles:*');
+      
       // Check if this is an API request or a regular form submission
       if (req.headers.accept && req.headers.accept.includes('application/json')) {
         return res.status(200).json({ 
@@ -816,6 +823,9 @@ exports.deleteVehicle = async (req, res) => {
     await req.prisma.vehicle.delete({
       where: { id }
     });
+    
+    // Invalidate all vehicle caches since a vehicle was deleted
+    await deleteCachePattern('vehicles:*');
     
     req.flash('success', 'Vehicle has been deleted successfully.');
     res.redirect('/admin/vehicles');
@@ -1241,6 +1251,9 @@ exports.createDeal = async (req, res) => {
     
     console.log('Deal created successfully:', deal);
     
+    // Invalidate all deal caches since a new deal was added
+    await deleteCachePattern('deals:*');
+    
     if (req.headers.accept && req.headers.accept.includes('application/json')) {
       return res.status(201).json({ 
         success: true, 
@@ -1317,6 +1330,9 @@ exports.updateDeal = async (req, res) => {
       }
     });
     
+    // Invalidate all deal caches since deal data was modified
+    await deleteCachePattern('deals:*');
+    
     if (req.headers.accept && req.headers.accept.includes('application/json')) {
       return res.status(200).json({ 
         success: true, 
@@ -1351,6 +1367,9 @@ exports.deleteDeal = async (req, res) => {
     await req.prisma.deal.delete({
       where: { id }
     });
+    
+    // Invalidate all deal caches since a deal was deleted
+    await deleteCachePattern('deals:*');
     
     if (req.headers.accept && req.headers.accept.includes('application/json')) {
       return res.status(200).json({ 

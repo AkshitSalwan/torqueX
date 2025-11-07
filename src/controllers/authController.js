@@ -148,6 +148,11 @@ exports.handleAuthCallback = async (req, res) => {
               req.flash('error', 'Invalid email or password');
               return res.redirect('/auth/login');
             }
+          } else {
+            // User exists but has no password set - this shouldn't happen for fallback auth
+            logger.warn('Login attempt for user without password', { email: authData.email });
+            req.flash('error', 'Invalid email or password. Please contact support.');
+            return res.redirect('/auth/login');
           }
           
           logger.info('User authenticated successfully', { 

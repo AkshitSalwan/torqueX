@@ -3,11 +3,28 @@
  * Handles vehicle listings and individual vehicle details
  */
 
+const { getCache, setCache, CacheKeys } = require('../utils/redis');
+
 // Get all vehicles with optional filtering
 exports.getAllVehicles = async (req, res) => {
   try {
     // Parse query parameters for filtering
     const { type, minPrice, maxPrice, available } = req.query;
+    
+    // Create cache key based on filters
+    const cacheKey = `vehicles:list:${JSON.stringify({ type, minPrice, maxPrice, available })}`;
+    
+    // Try to get from cache
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.render('vehicles/index', { 
+        title: 'Browse Vehicles',
+        vehicles: cached.vehicles,
+        types: cached.types,
+        filters: req.query,
+        user: req.user || null
+      });
+    }
     
     // Build filter object
     const filter = {};
@@ -42,10 +59,15 @@ exports.getAllVehicles = async (req, res) => {
       distinct: ['type']
     });
     
+    const typesArray = types.map(t => t.type);
+    
+    // Cache the results for 5 minutes
+    await setCache(cacheKey, { vehicles, types: typesArray }, 300);
+    
     res.render('vehicles/index', { 
       title: 'Browse Vehicles',
       vehicles,
-      types: types.map(t => t.type),
+      types: typesArray,
       filters: req.query,
       user: req.user || null
     });

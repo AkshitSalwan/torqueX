@@ -9,6 +9,10 @@ const { createClerkClient, ClerkExpressWithAuth } = require('@clerk/clerk-sdk-no
 const flash = require('connect-flash');
 const session = require('express-session');
 const methodOverride = require('method-override');
+const RedisStore = require('connect-redis').default;
+
+// Import Redis utilities
+const { initRedis, getRedisClient } = require('./src/utils/redis');
 
 // Import security middleware
 const securityMiddleware = require('./src/middleware/securityMiddleware');
@@ -49,18 +53,40 @@ app.use(methodOverride('_method')); // Add support for PUT/DELETE in forms
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Initialize Redis and Session store
+let redisClient;
+(async () => {
+  try {
+    redisClient = await initRedis();
+  } catch (error) {
+    console.error('Failed to initialize Redis:', error);
+    console.warn('Application will continue with in-memory session store');
+  }
+})();
+
 // Session and flash middleware
-app.use(session({
+const sessionConfig = {
   secret: process.env.SESSION_SECRET || 'torquex-secret',
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'strict',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
-}));
+};
+
+// Use Redis store if available, otherwise fall back to in-memory
+if (redisClient) {
+  sessionConfig.store = new RedisStore({
+    client: redisClient,
+    prefix: 'torquex:sess:',
+    ttl: 24 * 60 * 60 // 24 hours in seconds
+  });
+}
+
+app.use(session(sessionConfig));
 app.use(flash());
 
 // ===== Additional Security Middleware =====
@@ -77,8 +103,8 @@ app.use((req, res, next) => {
   res.locals.successMessages = req.flash('success');
   res.locals.errorMessages = req.flash('error');
   
-  // We'll be handling Clerk initialization directly in the header template
-  // to avoid any issues with environment variables not being properly passed
+  // Make Clerk publishable key available to all views
+  res.locals.clerkPublishableKey = process.env.CLERK_PUBLISHABLE_KEY || '';
   
   next();
 });

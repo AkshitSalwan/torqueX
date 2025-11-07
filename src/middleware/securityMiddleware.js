@@ -5,8 +5,9 @@
 
 const crypto = require('../utils/crypto');
 const logger = require('../utils/logger');
+const { checkRateLimit, isRedisConnected } = require('../utils/redis');
 
-// Store request counts for rate limiting (in production, use Redis)
+// Fallback in-memory store for rate limiting when Redis is unavailable
 const requestCounts = new Map();
 const RATE_LIMIT_WINDOW = 60 * 1000; // 1 minute in milliseconds
 const RATE_LIMIT_MAX_REQUESTS = 100; // Max requests per window
@@ -121,37 +122,72 @@ exports.sanitizeInput = (req, res, next) => {
 /**
  * Rate Limiting Middleware
  * Prevents abuse by limiting requests per IP
+ * Uses Redis if available, falls back to in-memory store
  */
-exports.rateLimit = (maxRequests = RATE_LIMIT_MAX_REQUESTS, windowMs = RATE_LIMIT_WINDOW) => {
-  return (req, res, next) => {
+exports.rateLimit = (maxRequests = RATE_LIMIT_MAX_REQUESTS, windowSec = 60) => {
+  return async (req, res, next) => {
     const ip = req.ip;
-    const now = Date.now();
     
-    // Clean up old entries
-    if (!requestCounts.has(ip)) {
-      requestCounts.set(ip, []);
-    }
-    
-    const requests = requestCounts.get(ip);
-    const recentRequests = requests.filter(time => now - time < windowMs);
-    
-    if (recentRequests.length >= maxRequests) {
-      logger.warn('Rate limit exceeded', {
-        ip,
-        requests: recentRequests.length,
-        limit: maxRequests
-      });
+    try {
+      // Try to use Redis rate limiting if connected
+      if (isRedisConnected()) {
+        const result = await checkRateLimit(ip, maxRequests, windowSec);
+        
+        // Set rate limit headers
+        res.setHeader('X-RateLimit-Limit', maxRequests);
+        res.setHeader('X-RateLimit-Remaining', result.remaining);
+        res.setHeader('X-RateLimit-Reset', new Date(result.resetTime).toISOString());
+        
+        if (!result.allowed) {
+          logger.warn('Rate limit exceeded (Redis)', {
+            ip,
+            limit: maxRequests,
+            resetTime: result.resetTime
+          });
+          
+          return res.status(429).json({
+            success: false,
+            message: 'Too many requests. Please try again later.',
+            retryAfter: Math.ceil((result.resetTime - Date.now()) / 1000)
+          });
+        }
+        
+        return next();
+      }
       
-      return res.status(429).json({
-        success: false,
-        message: 'Too many requests. Please try again later.'
-      });
+      // Fallback to in-memory rate limiting
+      const now = Date.now();
+      const windowMs = windowSec * 1000;
+      
+      if (!requestCounts.has(ip)) {
+        requestCounts.set(ip, []);
+      }
+      
+      const requests = requestCounts.get(ip);
+      const recentRequests = requests.filter(time => now - time < windowMs);
+      
+      if (recentRequests.length >= maxRequests) {
+        logger.warn('Rate limit exceeded (in-memory)', {
+          ip,
+          requests: recentRequests.length,
+          limit: maxRequests
+        });
+        
+        return res.status(429).json({
+          success: false,
+          message: 'Too many requests. Please try again later.'
+        });
+      }
+      
+      recentRequests.push(now);
+      requestCounts.set(ip, recentRequests);
+      
+      next();
+    } catch (error) {
+      logger.error('Rate limit check error', error);
+      // On error, allow the request (fail open)
+      next();
     }
-    
-    recentRequests.push(now);
-    requestCounts.set(ip, recentRequests);
-    
-    next();
   };
 };
 
