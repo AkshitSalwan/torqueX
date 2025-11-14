@@ -256,4 +256,10 @@ exports.validateDealData = (data) => {
   };
 };
 
+// Aliases for test compatibility
+exports.isValidEmail = exports.validateEmail;
+exports.isValidPhone = exports.validatePhone;
+exports.isValidDate = exports.validateDate;
+exports.isValidPrice = exports.validatePrice;
+
 module.exports = exports;
