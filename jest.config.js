@@ -20,7 +20,8 @@ module.exports = {
     '/node_modules/',
     '/coverage/',
     '/prisma/',
-    '/public/'
+    '/public/',
+    '/tests/e2e/'
   ],
 
   // Coverage paths to ignore
