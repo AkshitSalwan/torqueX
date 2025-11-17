@@ -1215,8 +1215,18 @@ exports.createBroadcast = async (req, res) => {
 // Get all vehicle requests for admin
 exports.getVehicleRequests = async (req, res) => {
   try {
-    // Get vehicle requests
+    // Get status filter from query params (default to 'all')
+    const statusFilter = req.query.status || 'all';
+    
+    // Build the where clause based on status
+    let whereClause = {};
+    if (statusFilter !== 'all') {
+      whereClause.status = statusFilter.toUpperCase();
+    }
+    
+    // Get vehicle requests with optional status filter
     const vehicleRequests = await req.prisma.vehicleRequest.findMany({
+      where: whereClause,
       orderBy: {
         createdAt: 'desc'
       },
@@ -1228,6 +1238,7 @@ exports.getVehicleRequests = async (req, res) => {
     res.render('admin/vehicle-requests', {
       title: 'Vehicle Requests',
       vehicleRequests,
+      currentStatus: statusFilter,
       user: req.user,
       successMessages: req.flash('success'),
       errorMessages: req.flash('error')
