@@ -200,14 +200,16 @@ exports.getBookingPayment = async (req, res) => {
     if (!booking) {
       return res.status(404).render('error', { 
         message: 'Booking not found',
-        error: { status: 404 }
+        error: { status: 404 },
+        user: req.user || null
       });
     }
     
     if (booking.userId !== req.user.id) {
       return res.status(403).render('error', { 
         message: 'Unauthorized',
-        error: { status: 403 }
+        error: { status: 403 },
+        user: req.user || null
       });
     }
     
@@ -217,26 +219,79 @@ exports.getBookingPayment = async (req, res) => {
       (1000 * 60 * 60 * 24)
     );
     
+    // Create or retrieve Stripe Payment Intent
+    let clientSecret;
+    
+    if (booking.paymentIntentId) {
+      // Retrieve existing payment intent
+      try {
+        const paymentIntent = await stripe.paymentIntents.retrieve(booking.paymentIntentId);
+        clientSecret = paymentIntent.client_secret;
+      } catch (error) {
+        console.error('Error retrieving payment intent:', error);
+        // Create new one if retrieval fails
+        const paymentIntent = await createPaymentIntent(booking);
+        clientSecret = paymentIntent.client_secret;
+        
+        // Update booking with new payment intent
+        await req.prisma.booking.update({
+          where: { id },
+          data: { paymentIntentId: paymentIntent.id }
+        });
+      }
+    } else {
+      // Create new payment intent
+      const paymentIntent = await createPaymentIntent(booking);
+      clientSecret = paymentIntent.client_secret;
+      
+      // Update booking with payment intent ID
+      await req.prisma.booking.update({
+        where: { id },
+        data: { paymentIntentId: paymentIntent.id }
+      });
+    }
+    
     res.render('bookings/payment', { 
       title: 'Complete Your Booking',
       booking,
       duration,
+      clientSecret,
+      stripePublicKey: process.env.STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_PUBLIC_KEY,
       user: req.user
     });
   } catch (error) {
     console.error('Get booking payment error:', error);
     res.status(500).render('error', { 
       message: 'Error loading payment page',
-      error: req.app.get('env') === 'development' ? error : {}
+      error: req.app.get('env') === 'development' ? error : {},
+      user: req.user || null
     });
   }
 };
+
+// Helper function to create payment intent
+async function createPaymentIntent(booking) {
+  return await stripe.paymentIntents.create({
+    amount: Math.round(booking.totalPrice * 100), // Convert to cents
+    currency: 'usd',
+    automatic_payment_methods: {
+      enabled: true,
+    },
+    metadata: {
+      bookingId: booking.id,
+      vehicleId: booking.vehicleId,
+      userId: booking.userId,
+      vehicleName: booking.vehicle.name
+    },
+    description: `Booking for ${booking.vehicle.name} - ${new Date(booking.startDate).toLocaleDateString()} to ${new Date(booking.endDate).toLocaleDateString()}`
+  });
+}
 
 // Process booking payment
 exports.processPayment = async (req, res) => {
   try {
     const { id } = req.params;
-    const { paymentMethodId } = req.body;
+    const { paymentIntentId } = req.body;
     
     const booking = await req.prisma.booking.findUnique({
       where: { id },
@@ -267,32 +322,16 @@ exports.processPayment = async (req, res) => {
     }
     
     try {
-      // Create Stripe payment intent
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(booking.totalPrice * 100), // Convert to cents
-        currency: 'usd',
-        payment_method: paymentMethodId,
-        confirm: true,
-        metadata: {
-          bookingId: booking.id,
-          vehicleId: booking.vehicleId,
-          userId: booking.userId,
-          vehicleName: booking.vehicle.name
-        },
-        description: `Booking for ${booking.vehicle.name} - ${new Date(booking.startDate).toLocaleDateString()} to ${new Date(booking.endDate).toLocaleDateString()}`
-      });
+      // Retrieve the payment intent to check its status
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
 
       if (paymentIntent.status === 'succeeded') {
-        // Encrypt sensitive payment method details
-        const encryptedPaymentMethod = crypto.encryptField(paymentMethodId);
-        
-        // Update booking status to CONFIRMED with encrypted payment method
+        // Update booking status to CONFIRMED
         const updatedBooking = await req.prisma.booking.update({
           where: { id },
           data: {
             status: 'CONFIRMED',
-            paymentIntentId: paymentIntent.id,
-            paymentMethod: encryptedPaymentMethod
+            paymentIntentId: paymentIntent.id
           }
         });
 
@@ -300,6 +339,7 @@ exports.processPayment = async (req, res) => {
         
         // Invalidate user bookings cache
         await deleteCachePattern(`bookings:user:${booking.userId}`);
+        await deleteCachePattern('admin:dashboard:*');
 
         // TODO: Send confirmation email
 
@@ -309,12 +349,12 @@ exports.processPayment = async (req, res) => {
           redirectUrl: `/bookings/${id}/confirmation`,
           paymentIntentId: paymentIntent.id
         });
-      } else if (paymentIntent.status === 'requires_action') {
-        logger.info('Payment requires additional action', { bookingId: id });
+      } else if (paymentIntent.status === 'requires_action' || paymentIntent.status === 'requires_payment_method') {
+        logger.info('Payment requires action', { bookingId: id, status: paymentIntent.status });
         return res.status(400).json({ 
           success: false, 
-          message: 'Payment requires additional action',
-          client_secret: paymentIntent.client_secret
+          message: 'Payment incomplete. Please try again.',
+          status: paymentIntent.status
         });
       } else {
         logger.warn('Payment failed', {
