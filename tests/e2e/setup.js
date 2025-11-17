@@ -15,6 +15,11 @@ beforeAll(async () => {
 // Global teardown after all E2E tests
 afterAll(async () => {
   console.log('✅ E2E test suite completed');
+  
+  // In headed mode, wait 3 seconds before closing so you can see the final state
+  if (process.env.HEADLESS === 'false') {
+    await new Promise(resolve => setTimeout(resolve, 3000));
+  }
 });
 
 // Setup before each test
@@ -23,11 +28,18 @@ beforeEach(async () => {
   // Set viewport size for consistency
   await page.setViewport({ width: 1280, height: 720 });
   
-  // Enable console logs from the browser in test output
+  // Enable console logs from the browser in test output (filter out expected errors)
   page.on('console', msg => {
     const type = msg.type();
+    const text = msg.text();
+    
+    // Skip expected 401 and CSP errors - these are normal for testing protected routes
+    if (text.includes('401') || text.includes('Unauthorized') || text.includes('Content Security Policy')) {
+      return;
+    }
+    
     if (type === 'error') {
-      console.error('Browser Error:', msg.text());
+      console.error('Browser Error:', text);
     }
   });
   

@@ -6,27 +6,33 @@
   <title><%= typeof title !== 'undefined' ? title : 'Error' %> | TorqueX</title>
   <link rel="stylesheet" href="/stylesheets/style.css">
   <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
-  <!-- Clerk Authentication -->
-  <% if (typeof clerkPublishableKey !== 'undefined' && clerkPublishableKey && clerkPublishableKey.length > 0) { %>
-  <script src="https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js"></script>
+  <!-- Clerk Authentication (Optional) -->
+  <% if (typeof clerkPublishableKey !== 'undefined' && clerkPublishableKey && clerkPublishableKey.length > 0 && clerkPublishableKey !== 'undefined') { %>
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Get Clerk publishable key from server
-      const publishableKey = '<%= clerkPublishableKey %>';
-      
-      // Initialize Clerk with the provided key
-      if (window.Clerk && publishableKey) {
-        window.Clerk.load({ 
-          publishableKey: publishableKey
-        }).then(function() {
-          console.log('Clerk initialized successfully');
-          document.dispatchEvent(new Event('clerkLoaded'));
-        }).catch(function(error) {
-          console.log('Clerk initialization failed, using fallback auth');
-          document.dispatchEvent(new Event('clerkFailed'));
-        });
-      }
-    });
+    // Only load Clerk if we have a valid key
+    (function() {
+      var script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest/dist/clerk.browser.js';
+      script.async = true;
+      script.onload = function() {
+        if (window.Clerk) {
+          window.Clerk.load({ 
+            publishableKey: '<%= clerkPublishableKey %>'
+          }).then(function() {
+            console.log('Clerk initialized successfully');
+            document.dispatchEvent(new Event('clerkLoaded'));
+          }).catch(function(error) {
+            console.log('Clerk initialization failed, using fallback auth:', error.message);
+            document.dispatchEvent(new Event('clerkFailed'));
+          });
+        }
+      };
+      script.onerror = function() {
+        console.log('Clerk script failed to load, using fallback auth');
+        document.dispatchEvent(new Event('clerkFailed'));
+      };
+      document.head.appendChild(script);
+    })();
   </script>
   <% } else { %>
   <script>

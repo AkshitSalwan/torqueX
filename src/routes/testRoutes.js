@@ -5,10 +5,57 @@
 
 const express = require('express');
 const router = express.Router();
+const { getRedisClient } = require('../utils/redis');
 
 // Test hello endpoint
 router.get('/hello', (req, res) => {
   res.json({ message: 'Hello from TorqueX API' });
+});
+
+// Test Redis status
+router.get('/redis-status', async (req, res) => {
+  try {
+    const redisClient = getRedisClient();
+    
+    if (!redisClient) {
+      return res.json({
+        status: 'disconnected',
+        message: 'Redis client not initialized',
+        integrated: true,
+        connected: false
+      });
+    }
+
+    const isReady = redisClient.isReady;
+    const isOpen = redisClient.isOpen;
+    
+    // Try to ping Redis
+    let pingResponse = null;
+    if (isReady) {
+      try {
+        pingResponse = await redisClient.ping();
+      } catch (error) {
+        pingResponse = `Error: ${error.message}`;
+      }
+    }
+
+    res.json({
+      status: isReady ? 'connected' : 'disconnected',
+      integrated: true,
+      connected: isReady,
+      isOpen: isOpen,
+      ping: pingResponse,
+      message: isReady ? 'Redis is integrated and connected' : 'Redis is integrated but not connected'
+    });
+  } catch (error) {
+    res.json({
+      status: 'error',
+      integrated: true,
+      connected: false,
+      error: error.message,
+      message: 'Redis is integrated but encountered an error'
+    });
+  }
 });
 
 // Test 404 error

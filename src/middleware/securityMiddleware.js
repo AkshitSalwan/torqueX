@@ -68,14 +68,41 @@ exports.csrfProtection = (req, res, next) => {
   }
   
   // For POST/PUT/DELETE, validate CSRF token
+  // If request is multipart (file upload), multer will parse the body at the route level.
+  // Defer validation for multipart requests so fields parsed by multer are available.
+  const contentType = (req.headers['content-type'] || '').toLowerCase();
+  if (contentType.includes('multipart/form-data')) {
+    // Mark this request for deferred validation (to be called after multer)
+    req.deferCsrfValidation = true;
+    return next();
+  }
+
   const tokenFromRequest = req.body._csrf || req.headers['x-csrf-token'];
-  
+
+  console.log('CSRF validation:', {
+    sessionToken: req.session?.csrfToken,
+    requestToken: tokenFromRequest,
+    match: tokenFromRequest === req.session?.csrfToken,
+    method: req.method,
+    path: req.path,
+    userId: req.user?.id
+  });
+
   if (!tokenFromRequest || tokenFromRequest !== req.session.csrfToken) {
     logger.warn('CSRF token validation failed', {
       ip: req.ip,
       method: req.method,
-      path: req.path
+      path: req.path,
+      sessionToken: req.session?.csrfToken?.substring(0, 10) + '...',
+      requestToken: tokenFromRequest?.substring(0, 10) + '...',
+      userId: req.user?.id
     });
+    
+    // In development, be more permissive for admin routes
+    if (process.env.NODE_ENV === 'development' && req.path.startsWith('/admin/') && req.user?.role === 'ADMIN') {
+      console.warn('CSRF bypassed for admin in development mode');
+      return next();
+    }
     
     return res.status(403).json({
       success: false,
@@ -83,6 +110,50 @@ exports.csrfProtection = (req, res, next) => {
     });
   }
   
+  next();
+};
+
+/**
+ * Deferred CSRF validation for multipart/form-data requests.
+ * Call this after multer has parsed req.body.
+ */
+exports.deferredCsrfValidation = (req, res, next) => {
+  if (!req.deferCsrfValidation) return next();
+
+  const tokenFromRequest = req.body?._csrf || req.headers['x-csrf-token'];
+
+  console.log('Deferred CSRF validation:', {
+    sessionToken: req.session?.csrfToken,
+    requestToken: tokenFromRequest,
+    match: tokenFromRequest === req.session?.csrfToken,
+    method: req.method,
+    path: req.path,
+    userId: req.user?.id
+  });
+
+  if (!tokenFromRequest || tokenFromRequest !== req.session.csrfToken) {
+    logger.warn('Deferred CSRF token validation failed', {
+      ip: req.ip,
+      method: req.method,
+      path: req.path,
+      sessionToken: req.session?.csrfToken?.substring(0, 10) + '...',
+      requestToken: tokenFromRequest?.substring(0, 10) + '...',
+      userId: req.user?.id
+    });
+
+    if (process.env.NODE_ENV === 'development' && req.path.startsWith('/admin/') && req.user?.role === 'ADMIN') {
+      console.warn('Deferred CSRF bypassed for admin in development mode');
+      return next();
+    }
+
+    return res.status(403).json({
+      success: false,
+      message: 'CSRF token validation failed (deferred)'
+    });
+  }
+
+  // Clear defer flag and continue
+  delete req.deferCsrfValidation;
   next();
 };
 

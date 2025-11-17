@@ -55,82 +55,38 @@
     const formElement = document.querySelector('form');
     const clerkContainer = document.getElementById('clerk-auth-container');
     
-    // First hide the Clerk container, show fallback form initially
+    // Always show fallback form first
     clerkContainer.style.display = 'none';
     formElement.style.display = 'block';
     
-    // Function to mount Clerk safely
-    function mountClerk() {
-      if (typeof window.Clerk === 'undefined') {
-        console.warn('Clerk still not available');
-        return false;
-      }
-      
+    // Listen for Clerk loaded event
+    document.addEventListener('clerkLoaded', function() {
+      console.log('Clerk loaded successfully - hiding fallback form');
       try {
-        console.log('Attempting to mount Clerk sign-in component');
-        
-        // Hide the fallback form
-        formElement.style.display = 'none';
-        
-        // Show and mount Clerk component
-        clerkContainer.style.display = 'block';
-        clerkContainer.innerHTML = ''; // Clear loading message
-        
-        // Use a try-catch to handle potential errors
-        try {
-          // Get the publishable key from meta tag
-          const publishableKey = document.querySelector('meta[name="clerk-publishable-key"]')?.content;
+        if (window.Clerk && window.Clerk.mountSignIn) {
+          formElement.style.display = 'none';
+          clerkContainer.style.display = 'block';
+          clerkContainer.innerHTML = '';
           
-          if (!publishableKey) {
-            console.error('Missing Clerk publishable key');
-            throw new Error('Missing Clerk publishable key');
-          }
-          
-          // Initialize with the publishable key directly
-          if (!window.Clerk.__loaded) {
-            window.Clerk.load({ 
-              publishableKey: publishableKey 
-            }).then(() => {
-              window.Clerk.mountSignIn(clerkContainer, {
-                signInUrl: '/auth/login',
-                afterSignInUrl: '/auth/callback',
-                redirectUrl: '/auth/callback'
-              });
-            });
-          } else {
-            window.Clerk.mountSignIn(clerkContainer, {
-              signInUrl: '/auth/login',
-              afterSignInUrl: '/auth/callback',
-              redirectUrl: '/auth/callback'
-            });
-          }
-          
-          return true;
-        } catch (error) {
-          console.error('Error mounting Clerk:', error);
-          // Show fallback form on error
-          formElement.style.display = 'block';
-          clerkContainer.style.display = 'none';
-          return false;
+          window.Clerk.mountSignIn(clerkContainer, {
+            signInUrl: '/auth/login',
+            afterSignInUrl: '/auth/callback',
+            redirectUrl: '/auth/callback'
+          });
         }
       } catch (error) {
-        console.error('Error accessing Clerk:', error);
-        return false;
+        console.error('Error mounting Clerk:', error);
+        formElement.style.display = 'block';
+        clerkContainer.style.display = 'none';
       }
-    }
-    
-    // Listen for the clerkLoaded custom event
-    document.addEventListener('clerkLoaded', function() {
-      console.log('Clerk script loaded event received');
-      mountClerk();
     });
     
-    // Also try after a delay as a backup
-    setTimeout(function() {
-      if (typeof window.Clerk !== 'undefined') {
-        mountClerk();
-      }
-    }, 1500);
+    // Listen for Clerk failed event - ensure fallback form is visible
+    document.addEventListener('clerkFailed', function() {
+      console.log('Clerk not available - using fallback form');
+      formElement.style.display = 'block';
+      clerkContainer.style.display = 'none';
+    });
   });
 </script>
 

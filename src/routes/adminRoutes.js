@@ -4,6 +4,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const adminController = require('../controllers/adminController');
+const securityMiddleware = require('../middleware/securityMiddleware');
 const { requireAuth } = require('../middleware/authMiddleware');
 const { requireAdmin } = require('../middleware/roleMiddleware');
 
@@ -47,13 +48,15 @@ router.use(requireAuth, requireAdmin);
 // Admin dashboard
 router.get('/dashboard', adminController.getDashboard);
 router.get('/stats', adminController.getStats);
+router.get('/redis-status', adminController.getRedisStatus);
 
 // Vehicle management
 router.get('/vehicles', adminController.getVehiclesAdmin);
 router.get('/vehicles/new', adminController.getVehicleForm);
 router.get('/vehicles/:id', adminController.getVehicleDetailAdmin);
-router.post('/vehicles', upload.single('image'), adminController.createVehicle);
-router.put('/vehicles/:id', upload.single('image'), adminController.updateVehicle);
+router.post('/vehicles', upload.single('image'), securityMiddleware.deferredCsrfValidation, adminController.createVehicle);
+router.put('/vehicles/:id', upload.single('image'), securityMiddleware.deferredCsrfValidation, adminController.updateVehicle);
+router.post('/vehicles/:id', adminController.deleteVehicle); // Method-override will convert to DELETE
 router.delete('/vehicles/:id', adminController.deleteVehicle);
 
 // Booking management

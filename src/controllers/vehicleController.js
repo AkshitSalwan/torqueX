@@ -87,6 +87,16 @@ exports.getVehicleById = async (req, res) => {
   try {
     const { id } = req.params;
     
+    console.log('Fetching vehicle with ID:', id);
+    
+    // Try to get from cache
+    const cacheKey = `vehicle:detail:${id}`;
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      console.log('Vehicle loaded from cache:', id);
+      return res.render('vehicles/detail', cached);
+    }
+    
     // Get vehicle with reviews
     const vehicle = await req.prisma.vehicle.findUnique({
       where: { id },
@@ -103,6 +113,7 @@ exports.getVehicleById = async (req, res) => {
     });
     
     if (!vehicle) {
+      console.log('Vehicle not found with ID:', id);
       return res.status(404).render('error', { 
         title: 'Not Found',
         message: 'Vehicle not found',
@@ -110,6 +121,8 @@ exports.getVehicleById = async (req, res) => {
         user: req.user || null
       });
     }
+    
+    console.log('Vehicle found:', vehicle.name);
     
     // Calculate average rating
     let avgRating = 0;
@@ -130,13 +143,19 @@ exports.getVehicleById = async (req, res) => {
       userHasBooked = !!booking;
     }
     
-    res.render('vehicles/detail', { 
+    // Prepare response data
+    const responseData = {
       title: vehicle.name,
       vehicle,
       avgRating,
       userHasBooked,
       user: req.user || null
-    });
+    };
+    
+    // Cache for 2 minutes (shorter TTL since reviews can be added)
+    await setCache(cacheKey, responseData, 120);
+    
+    res.render('vehicles/detail', responseData);
   } catch (error) {
     console.error('Get vehicle error:', error);
     res.status(500).render('error', { 

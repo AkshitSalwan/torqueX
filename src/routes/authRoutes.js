@@ -5,9 +5,11 @@ const { requireAuth } = require('../middleware/authMiddleware');
 
 // Login page
 router.get('/login', authController.getLoginPage);
+router.post('/login', authController.handleAuthCallback); // Handle login form submission
 
 // Signup page
 router.get('/signup', authController.getSignupPage);
+router.post('/signup', authController.handleAuthCallback); // Handle signup form submission
 
 // Logout
 router.get('/logout', requireAuth, authController.logout);

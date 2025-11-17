@@ -1,23 +1,21 @@
 module.exports = {
   launch: {
-    headless: true,
+    headless: process.env.HEADLESS !== 'false',
+    slowMo: process.env.HEADLESS === 'false' ? 500 : 0,
+    devtools: process.env.HEADLESS === 'false',
     args: [
+      '--window-size=1280,800',
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--disable-gpu'
     ],
-    defaultViewport: {
-      width: 1280,
-      height: 720
-    }
+    defaultViewport: null
   },
   browserContext: 'default',
   server: {
     command: 'npm start',
     port: 3000,
-    launchTimeout: 30000,
-    debug: true
+    launchTimeout: 60000,
+    protocol: 'http',
+    usedPortAction: 'kill'
   }
 };

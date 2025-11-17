@@ -3,6 +3,8 @@
  * Handles creating and managing reviews
  */
 
+const { deleteCachePattern } = require('../utils/redis');
+
 /**
  * Get general review form (shows available bookings to review)
  */
@@ -218,6 +220,11 @@ exports.createReview = async (req, res) => {
         comment
       }
     });
+    
+    // Invalidate vehicle detail cache (includes reviews)
+    await deleteCachePattern(`vehicle:detail:${booking.vehicleId}`);
+    // Invalidate admin dashboard cache
+    await deleteCachePattern('admin:dashboard:*');
 
     req.flash('success', 'Review submitted successfully');
     res.redirect('/user/reviews');

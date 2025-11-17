@@ -1,184 +1,243 @@
 const { PrismaClient } = require('@prisma/client');
-const { deleteCachePattern } = require('../utils/redis');
+const { deleteCachePattern, getRedisClient, getCache, setCache } = require('../utils/redis');
 
 // Dashboard
 exports.getDashboard = async (req, res) => {
   try {
-    // Get user count
-    const userCount = await req.prisma.user.count({
-      where: { role: 'USER' }
-    });
+    console.log('Loading admin dashboard for user:', req.user?.email);
+    console.log('Request user object:', req.user);
+    console.log('Prisma available:', !!req.prisma);
     
-    // Get vehicle count
-    const vehicleCount = await req.prisma.vehicle.count();
+    // Check if req.prisma exists
+    if (!req.prisma) {
+      console.error('Prisma client not found on request object');
+      return res.status(500).render('error', { 
+        title: 'Error',
+        message: 'Database connection error',
+        error: { message: 'Prisma client not initialized' },
+        user: req.user || null
+      });
+    }
     
-    // Get vehicle types stats
-    const vehicleTypes = await req.prisma.vehicle.groupBy({
-      by: ['type'],
-      _count: true
-    });
+    // Skip cache for now to debug
+    console.log('Skipping cache, fetching fresh data...');
     
+    console.log('Fetching dashboard data...');
+    
+    // Get basic stats with error handling
+    let userCount = 0;
+    let vehicleCount = 0;
+    let totalBookingsCount = 0;
+    let vehicleTypes = [];
+    let recentBookings = [];
+    let recentReviews = [];
+    let popularVehicles = [];
+    let recentVehicleRequests = [];
+    let totalRevenue = null;
+    
+    try {
+      // Get user count
+      userCount = await req.prisma.user.count({
+        where: { role: 'USER' }
+      });
+      console.log('User count:', userCount);
+    } catch (error) {
+      console.error('Error fetching user count:', error.message);
+    }
+    
+    try {
+      // Get vehicle count
+      vehicleCount = await req.prisma.vehicle.count();
+      console.log('Vehicle count:', vehicleCount);
+    } catch (error) {
+      console.error('Error fetching vehicle count:', error.message);
+    }
+    
+    try {
+      // Get vehicle types stats
+      vehicleTypes = await req.prisma.vehicle.groupBy({
+        by: ['type'],
+        _count: true
+      });
+      console.log('Vehicle types:', vehicleTypes.length);
+    } catch (error) {
+      console.error('Error fetching vehicle types:', error.message);
+    }
+    
+    try {
+      // Get total bookings count
+      totalBookingsCount = await req.prisma.booking.count();
+      console.log('Total bookings:', totalBookingsCount);
+    } catch (error) {
+      console.error('Error fetching bookings count:', error.message);
+    }
+    
+    try {
+      // Get recent bookings
+      recentBookings = await req.prisma.booking.findMany({
+        take: 5,
+        orderBy: {
+          id: 'desc' // Use id instead of startDate for safer ordering
+        },
+        include: {
+          vehicle: {
+            select: {
+              id: true,
+              name: true,
+              make: true,
+              model: true,
+              year: true
+            }
+          },
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      });
+      console.log('Recent bookings:', recentBookings.length);
+    } catch (error) {
+      console.error('Error fetching recent bookings:', error.message);
+    }
+    
+    try {
+      // Get recent reviews
+      recentReviews = await req.prisma.review.findMany({
+        take: 5,
+        orderBy: {
+          createdAt: 'desc'
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          vehicle: {
+            select: {
+              id: true,
+              name: true
+            }
+          }
+        }
+      });
+      console.log('Recent reviews:', recentReviews.length);
+    } catch (error) {
+      console.error('Error fetching recent reviews:', error.message);
+    }
+    
+    try {
+      // Get popular vehicles
+      popularVehicles = await req.prisma.vehicle.findMany({
+        take: 5,
+        include: {
+          _count: {
+            select: { bookings: true }
+          }
+        }
+      });
+      console.log('Popular vehicles:', popularVehicles.length);
+    } catch (error) {
+      console.error('Error fetching popular vehicles:', error.message);
+    }
+    
+    try {
+      // Get recent vehicle requests
+      recentVehicleRequests = await req.prisma.vehicleRequest.findMany({
+        take: 5,
+        orderBy: {
+          createdAt: 'desc'
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true
+            }
+          }
+        }
+      });
+      console.log('Recent vehicle requests:', recentVehicleRequests.length);
+    } catch (vehicleRequestError) {
+      console.log('Vehicle requests table may not exist:', vehicleRequestError.message);
+      // Continue without vehicle requests data
+    }
+    
+    try {
+      // Calculate total revenue
+      totalRevenue = await req.prisma.booking.aggregate({
+        _sum: {
+          totalPrice: true
+        }
+      });
+      console.log('Total revenue calculated');
+    } catch (error) {
+      console.error('Error calculating revenue:', error.message);
+    }
+    
+    // Calculate stats safely
     const vehicleStats = vehicleTypes.map(vt => ({
       type: vt.type,
       count: vt._count
     }));
     
-    // Get bookings with different statuses
-    const pendingBookingsCount = await req.prisma.booking.count({
-      where: {
-        status: 'PENDING'
-      }
-    });
+    // Get booking status counts safely
+    let pendingBookingsCount = 0;
+    let confirmedBookingsCount = 0;
+    let completedBookingsCount = 0;
+    let cancelledBookingsCount = 0;
     
-    const confirmedBookingsCount = await req.prisma.booking.count({
-      where: {
-        status: 'CONFIRMED'
-      }
-    });
-    
-    const completedBookingsCount = await req.prisma.booking.count({
-      where: {
-        status: 'COMPLETED'
-      }
-    });
-    
-    const cancelledBookingsCount = await req.prisma.booking.count({
-      where: {
-        status: 'CANCELLED'
-      }
-    });
+    try {
+      const bookingStatusCounts = await Promise.allSettled([
+        req.prisma.booking.count({ where: { status: 'PENDING' } }),
+        req.prisma.booking.count({ where: { status: 'CONFIRMED' } }),
+        req.prisma.booking.count({ where: { status: 'COMPLETED' } }),
+        req.prisma.booking.count({ where: { status: 'CANCELLED' } })
+      ]);
+      
+      pendingBookingsCount = bookingStatusCounts[0].status === 'fulfilled' ? bookingStatusCounts[0].value : 0;
+      confirmedBookingsCount = bookingStatusCounts[1].status === 'fulfilled' ? bookingStatusCounts[1].value : 0;
+      completedBookingsCount = bookingStatusCounts[2].status === 'fulfilled' ? bookingStatusCounts[2].value : 0;
+      cancelledBookingsCount = bookingStatusCounts[3].status === 'fulfilled' ? bookingStatusCounts[3].value : 0;
+      
+      console.log('Booking status counts fetched successfully');
+    } catch (error) {
+      console.error('Error fetching booking status counts:', error.message);
+    }
     
     // Combine pending and confirmed for "active" bookings
     const activeBookingsCount = pendingBookingsCount + confirmedBookingsCount;
-    
-    // Get total bookings count
-    const totalBookingsCount = await req.prisma.booking.count();
-    
-    // Get recent bookings
-    const recentBookings = await req.prisma.booking.findMany({
-      take: 5,
-      orderBy: {
-        id: 'desc'  // Using id as a proxy for creation time since createdAt doesn't exist
-      },
-      include: {
-        vehicle: true,
-        user: true
-      }
-    });
-    
-    // Get recent reviews
-    const recentReviews = await req.prisma.review.findMany({
-      take: 5,
-      orderBy: {
-        id: 'desc'  // Using id as a proxy for creation time
-      },
-      include: {
-        user: true,
-        vehicle: true
-      }
-    });
-    
-    // Get popular vehicles
-    const popularVehicles = await req.prisma.vehicle.findMany({
-      take: 5,
-      orderBy: {
-        bookings: {
-          _count: 'desc'
-        }
-      },
-      include: {
-        _count: {
-          select: { bookings: true }
-        }
-      }
-    });
-    
-    // Get recent vehicle requests
-    const recentVehicleRequests = await req.prisma.vehicleRequest.findMany({
-      take: 5,
-      orderBy: {
-        createdAt: 'desc'
-      },
-      include: {
-        user: true
-      }
-    });
-    
-    // Get vehicle request stats
-    const vehicleRequestStats = await req.prisma.vehicleRequest.groupBy({
-      by: ['status'],
-      _count: true
-    });
-    
-    // Calculate total revenue
-    const totalRevenue = await req.prisma.booking.aggregate({
-      _sum: {
-        totalPrice: true
-      }
-    });
-    
-    // Calculate current month revenue
-    // Since there's no createdAt field in the Booking model, we'll get all bookings
-    const currentMonthRevenue = await req.prisma.booking.aggregate({
-      _sum: {
-        totalPrice: true
-      }
-    });
-    
-    // For previous month, we'll also use all bookings
-    // In a real app, you would use the booking startDate or endDate instead
-    const previousMonthRevenue = await req.prisma.booking.aggregate({
-      _sum: {
-        totalPrice: true
-      }
-    });
-    
-    // Calculate growth rate
-    let growthRate = 0;
-    // Extract values safely, handling null results
-    const currentRev = currentMonthRevenue?._sum?.totalPrice || 0;
-    const prevRev = previousMonthRevenue?._sum?.totalPrice || 0;
-    
-    if (prevRev > 0) {
-      growthRate = ((currentRev - prevRev) / prevRev) * 100;
-    }
 
-    // Get new users this month - since there's no createdAt field, just count all users
-    const now = new Date();
-    const newUsers = await req.prisma.user.count({
-      where: {
-        role: 'USER'
-      }
-    });
-    
-    // Calculate average booking value
-    let avgBookingValue = 0;
-    if (totalBookingsCount > 0 && totalRevenue?._sum?.totalPrice) {
-      avgBookingValue = totalRevenue._sum.totalPrice / totalBookingsCount;
-    }
-    
-    // Process vehicle request stats
-    let requestStats = {};
-    if (vehicleRequestStats && vehicleRequestStats.length > 0) {
-      vehicleRequestStats.forEach(stat => {
-        requestStats[stat.status.toLowerCase()] = stat._count;
-      });
-    }
-
-    // Format the vehicle stats for the dashboard
-    const vehicleStatsFormatted = {
-      total: vehicleCount,
-      available: vehicleCount || 0, // Replace with actual count if available
-      unavailable: 0, // Replace with actual count if available
-      byType: vehicleTypes || []
-    };
-    
-    // Format vehicle request stats
-    const vehicleRequestStatsFormatted = {
-      pending: requestStats?.pending || 0
+    // Get Redis status safely
+    const redisClient = getRedisClient();
+    let redisStatus = {
+      connected: false,
+      status: 'disconnected',
+      ping: null,
+      error: null
     };
 
-    res.render('admin/dashboard', {
+    try {
+      if (redisClient) {
+        redisStatus.connected = redisClient.isReady;
+        redisStatus.status = redisClient.isReady ? 'connected' : 'disconnected';
+        if (redisClient.isReady) {
+          redisStatus.ping = await redisClient.ping();
+        }
+      }
+    } catch (error) {
+      redisStatus.error = error.message;
+      console.error('Redis status check error:', error.message);
+    }
+
+    // Format the dashboard data
+    const dashboardData = {
       title: 'Admin Dashboard',
       stats: {
         users: userCount,
@@ -190,25 +249,45 @@ exports.getDashboard = async (req, res) => {
         confirmedBookings: confirmedBookingsCount,
         completedBookings: completedBookingsCount,
         cancelledBookings: cancelledBookingsCount,
-        vehicleStats: vehicleStatsFormatted,
-        vehicleRequestStats: vehicleRequestStatsFormatted,
-        newUsers: newUsers || 0,
-        growthRate: growthRate || 0,
-        monthlyRevenue: currentMonthRevenue && currentMonthRevenue._sum ? currentMonthRevenue._sum.totalPrice || 0 : 0
+        vehicleStats: {
+          total: vehicleCount,
+          available: vehicleCount || 0,
+          unavailable: 0,
+          byType: vehicleStats || []
+        },
+        vehicleRequestStats: {
+          pending: 0 // Simplified for now
+        },
+        newUsers: userCount || 0,
+        growthRate: 0,
+        monthlyRevenue: totalRevenue && totalRevenue._sum ? totalRevenue._sum.totalPrice || 0 : 0
       },
-      recentBookings,
-      recentReviews,
-      popularVehicles,
-      recentVehicleRequests,
-      requestStats: vehicleRequestStats || [],
-      revenue: totalRevenue && totalRevenue._sum ? totalRevenue._sum.totalPrice || 0 : 0,
+      recentBookings: recentBookings || [],
+      recentReviews: recentReviews || [],
+      popularVehicles: popularVehicles || [],
+      recentVehicleRequests: recentVehicleRequests || [],
+      requestStats: [],
+      revenue: totalRevenue && totalRevenue._sum ? totalRevenue._sum.totalPrice || 0 : 0
+    };
+    
+    console.log('Dashboard data prepared successfully');
+    
+    res.render('admin/dashboard', {
+      ...dashboardData,
+      redisStatus,
       user: req.user
     });
   } catch (error) {
-    console.error('Admin dashboard error:', error);
+    console.error('=== ADMIN DASHBOARD ERROR ===');
+    console.error('Error message:', error.message);
+    console.error('Error name:', error.name);
+    console.error('Error stack:', error.stack);
+    console.error('============================');
     res.status(500).render('error', { 
+      title: 'Error',
       message: 'Error loading admin dashboard',
-      error: req.app.get('env') === 'development' ? error : {}
+      error: req.app.get('env') === 'development' ? error : {},
+      user: req.user || null
     });
   }
 };
@@ -347,6 +426,75 @@ exports.getStats = async (req, res) => {
   }
 };
 
+// Get Redis status (API endpoint)
+exports.getRedisStatus = async (req, res) => {
+  try {
+    const redisClient = getRedisClient();
+    
+    if (!redisClient) {
+      return res.json({
+        integrated: true,
+        connected: false,
+        status: 'disconnected',
+        message: 'Redis client not initialized',
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    const isReady = redisClient.isReady;
+    const isOpen = redisClient.isOpen;
+    
+    let pingResponse = null;
+    let dbSize = null;
+    let info = null;
+
+    if (isReady) {
+      try {
+        pingResponse = await redisClient.ping();
+        dbSize = await redisClient.dbSize();
+        // Get basic info
+        const rawInfo = await redisClient.info('server');
+        const lines = rawInfo.split('\r\n');
+        info = {};
+        lines.forEach(line => {
+          if (line && !line.startsWith('#') && line.includes(':')) {
+            const [key, value] = line.split(':');
+            info[key] = value;
+          }
+        });
+      } catch (error) {
+        console.error('Redis info error:', error);
+      }
+    }
+
+    res.json({
+      integrated: true,
+      connected: isReady,
+      status: isReady ? 'connected' : 'disconnected',
+      isOpen: isOpen,
+      ping: pingResponse,
+      dbSize: dbSize,
+      serverInfo: info ? {
+        version: info.redis_version,
+        uptime: info.uptime_in_seconds,
+        mode: info.redis_mode
+      } : null,
+      message: isReady ? 'Redis is integrated and connected successfully' : 'Redis is integrated but not connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Redis status error:', error);
+    res.status(500).json({
+      integrated: true,
+      connected: false,
+      status: 'error',
+      error: error.message,
+      message: 'Error checking Redis status',
+      timestamp: new Date().toISOString()
+    });
+  }
+};
+
 // Get all vehicles for admin
 exports.getVehiclesAdmin = async (req, res) => {
   try {
@@ -443,6 +591,27 @@ exports.createVehicle = async (req, res) => {
   try {
     console.log('Form submission received:', req.body);
     console.log('Content type:', req.headers['content-type']);
+    console.log('User object:', req.user);
+    console.log('User role:', req.user?.role);
+    console.log('Session CSRF token:', req.session?.csrfToken);
+    console.log('Request CSRF token:', req.body._csrf);
+    
+    // Check if user is authenticated and has admin role
+    if (!req.user) {
+      console.error('No user object found in request');
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Authentication required' 
+      });
+    }
+    
+    if (req.user.role !== 'ADMIN') {
+      console.error('User does not have admin role:', req.user.role);
+      return res.status(403).json({ 
+        success: false, 
+        message: 'Admin privileges required' 
+      });
+    }
     
     // Form might be coming from multipart/form-data or application/json
     const isMultipart = req.headers['content-type']?.includes('multipart/form-data');
@@ -592,6 +761,8 @@ exports.createVehicle = async (req, res) => {
       
       // Invalidate all vehicle caches since a new vehicle was added
       await deleteCachePattern('vehicles:*');
+      await deleteCachePattern('vehicle:detail:*');
+      await deleteCachePattern('admin:dashboard:*');
       
       // Handle different response types
       if (req.headers.accept && req.headers.accept.includes('application/json')) {

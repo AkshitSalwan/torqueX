@@ -7,6 +7,7 @@ const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const validators = require('../utils/validators');
 const logger = require('../utils/logger');
 const crypto = require('../utils/crypto');
+const { getCache, setCache, deleteCachePattern } = require('../utils/redis');
 
 // Show booking form
 exports.getBookingForm = async (req, res) => {
@@ -165,6 +166,9 @@ exports.createBooking = async (req, res) => {
     
     logger.logBookingCreated(booking.id, userId, vehicleId);
     
+    // Invalidate user bookings cache
+    await deleteCachePattern(`bookings:user:${userId}`);
+    
     // Redirect to payment page or booking summary
     res.status(200).json({ 
       success: true, 
@@ -293,6 +297,9 @@ exports.processPayment = async (req, res) => {
         });
 
         logger.logPaymentProcessed(id, booking.totalPrice, 'succeeded');
+        
+        // Invalidate user bookings cache
+        await deleteCachePattern(`bookings:user:${booking.userId}`);
 
         // TODO: Send confirmation email
 
@@ -381,15 +388,27 @@ exports.getUserBookings = async (req, res) => {
   try {
     const userId = req.user.id;
     
-    const bookings = await req.prisma.booking.findMany({
-      where: { userId },
-      include: {
-        vehicle: true
-      },
-      orderBy: {
-        startDate: 'desc'
-      }
-    });
+    // Try to get from cache
+    const cacheKey = `bookings:user:${userId}`;
+    const cached = await getCache(cacheKey);
+    
+    let bookings;
+    if (cached) {
+      bookings = cached;
+    } else {
+      bookings = await req.prisma.booking.findMany({
+        where: { userId },
+        include: {
+          vehicle: true
+        },
+        orderBy: {
+          startDate: 'desc'
+        }
+      });
+      
+      // Cache for 2 minutes
+      await setCache(cacheKey, bookings, 120);
+    }
     
     // Separate bookings by status
     const currentDate = new Date();

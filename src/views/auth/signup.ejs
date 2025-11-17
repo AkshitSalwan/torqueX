@@ -66,71 +66,41 @@
     const formElement = document.querySelector('form');
     const clerkContainer = document.getElementById('clerk-auth-container');
     
-    // First hide the Clerk container, show fallback form initially
+    // Always show fallback form first
     clerkContainer.style.display = 'none';
     formElement.style.display = 'block';
     
-    // Function to mount Clerk safely
-    function mountClerk() {
-      if (typeof window.Clerk === 'undefined') {
-        console.warn('Clerk still not available');
-        return false;
-      }
-      
+    // Listen for Clerk loaded event
+    document.addEventListener('clerkLoaded', function() {
+      console.log('Clerk loaded successfully - hiding fallback form');
       try {
-        // Check if Clerk is ready
-        if (!window.Clerk.__loaded) {
-          console.log('Clerk loaded but not yet fully initialized');
-          return false;
-        }
-        
-        console.log('Clerk is fully initialized, mounting sign-up component');
-        
-        // Hide the fallback form
-        formElement.style.display = 'none';
-        
-        // Show and mount Clerk component
-        clerkContainer.style.display = 'block';
-        
-        // Use a try-catch to handle potential errors
-        try {
+        if (window.Clerk && window.Clerk.mountSignUp) {
+          formElement.style.display = 'none';
+          clerkContainer.style.display = 'block';
+          clerkContainer.innerHTML = '';
+          
           window.Clerk.mountSignUp(clerkContainer, {
             signUpUrl: '/auth/signup',
             afterSignUpUrl: '/auth/callback',
-            redirectUrl: '/auth/callback',
+            redirectUrl: '/auth/callback'
           });
-          return true;
-        } catch (error) {
-          console.error('Error mounting Clerk:', error);
-          return false;
         }
       } catch (error) {
-        console.error('Error accessing Clerk:', error);
-        return false;
+        console.error('Error mounting Clerk:', error);
+        formElement.style.display = 'block';
+        clerkContainer.style.display = 'none';
       }
-    }
-    
-    // Listen for the clerkLoaded custom event
-    document.addEventListener('clerkLoaded', function() {
-      // Wait for Clerk to be fully initialized
-      const checkInterval = setInterval(function() {
-        if (mountClerk()) {
-          clearInterval(checkInterval);
-        }
-      }, 200);
-      
-      // Set a timeout to stop trying after 5 seconds
-      setTimeout(function() {
-        clearInterval(checkInterval);
-        console.warn('Timed out waiting for Clerk to initialize, using fallback form');
-      }, 5000);
     });
     
-    // Also try after a delay as a backup
-    setTimeout(function() {
-      mountClerk();
-    }, 2000);
+    // Listen for Clerk failed event - ensure fallback form is visible
+    document.addEventListener('clerkFailed', function() {
+      console.log('Clerk not available - using fallback form');
+      formElement.style.display = 'block';
+      clerkContainer.style.display = 'none';
+    });
   });
 </script>
+
+<%- include('../partials/footer') %>
 
 <%- include('../partials/footer') %>

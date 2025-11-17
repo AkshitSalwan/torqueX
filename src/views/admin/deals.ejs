@@ -254,7 +254,7 @@ document.addEventListener('DOMContentLoaded', function() {
   document.getElementById('addDealBtn').addEventListener('click', function() {
     // Reset the form
     dealForm.reset();
-    dealForm.action = '/admin/deals';
+    dealForm.action = '/deals';
     dealForm.method = 'POST';
     
     // Remove any _method field if it exists
@@ -302,10 +302,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const url = dealForm.action;
     
     // Use fetch API to send the request as POST with _method for PUT
+    // Get CSRF token from the form
+    const csrfToken = dealForm.querySelector('input[name="_csrf"]')?.value;
+    
     fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'CSRF-Token': csrfToken
       },
       body: JSON.stringify(data),
       credentials: 'same-origin'

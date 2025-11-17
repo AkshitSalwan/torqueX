@@ -5,15 +5,28 @@
 
 const crypto = require('../utils/crypto');
 const logger = require('../utils/logger');
+const { getCache, setCache, deleteCachePattern } = require('../utils/redis');
 
 // Get deals admin page
 exports.getDealsAdmin = async (req, res) => {
   try {
-    const deals = await req.prisma.deal.findMany({
-      orderBy: {
-        validUntil: 'desc'
-      }
-    });
+    // Try to get from cache
+    const cacheKey = 'deals:admin:list';
+    const cached = await getCache(cacheKey);
+    
+    let deals;
+    if (cached) {
+      deals = cached;
+    } else {
+      deals = await req.prisma.deal.findMany({
+        orderBy: {
+          validUntil: 'desc'
+        }
+      });
+      
+      // Cache for 5 minutes
+      await setCache(cacheKey, deals, 300);
+    }
     
     res.render('admin/deals', {
       title: 'Manage Deals',
@@ -45,7 +58,11 @@ exports.createDeal = async (req, res) => {
 
     // Validate required fields
     if (!code || !discount || !validFrom || !validUntil) {
-      req.flash('error', 'Missing required fields');
+      const errorMsg = 'Missing required fields';
+      if (req.headers['content-type'] === 'application/json') {
+        return res.status(400).json({ success: false, message: errorMsg });
+      }
+      req.flash('error', errorMsg);
       return res.redirect('/admin/deals');
     }
 
@@ -62,15 +79,26 @@ exports.createDeal = async (req, res) => {
         description,
         validFrom: new Date(validFrom),
         validUntil: new Date(validUntil),
-        isActive: isActive === 'on'
+        isActive: isActive === 'on' || isActive === true || isActive === 'true'
       }
     });
 
     logger.info('Deal created successfully', { dealId: deal.id, code: deal.code });
+    
+    // Invalidate deal caches
+    await deleteCachePattern('deals:*');
+    await deleteCachePattern('admin:dashboard:*');
+    
+    if (req.headers['content-type'] === 'application/json') {
+      return res.json({ success: true, message: 'Deal created successfully!', deal });
+    }
     req.flash('success', 'Deal created successfully!');
     res.redirect('/admin/deals');
   } catch (error) {
     logger.error('Deal creation failed', { error: error.message });
+    if (req.headers['content-type'] === 'application/json') {
+      return res.status(500).json({ success: false, message: `Failed to create deal: ${error.message}` });
+    }
     req.flash('error', `Failed to create deal: ${error.message}`);
     res.redirect('/admin/deals');
   }
@@ -91,7 +119,11 @@ exports.updateDeal = async (req, res) => {
 
     // Validate required fields
     if (!code || !discount || !validFrom || !validUntil) {
-      req.flash('error', 'Missing required fields');
+      const errorMsg = 'Missing required fields';
+      if (req.headers['content-type'] === 'application/json') {
+        return res.status(400).json({ success: false, message: errorMsg });
+      }
+      req.flash('error', errorMsg);
       return res.redirect('/admin/deals');
     }
 
@@ -109,15 +141,26 @@ exports.updateDeal = async (req, res) => {
         description,
         validFrom: new Date(validFrom),
         validUntil: new Date(validUntil),
-        isActive: isActive === 'on'
+        isActive: isActive === 'on' || isActive === true || isActive === 'true'
       }
     });
 
     logger.info('Deal updated successfully', { dealId: deal.id, code: deal.code });
+    
+    // Invalidate deal caches
+    await deleteCachePattern('deals:*');
+    await deleteCachePattern('admin:dashboard:*');
+    
+    if (req.headers['content-type'] === 'application/json') {
+      return res.json({ success: true, message: 'Deal updated successfully!', deal });
+    }
     req.flash('success', 'Deal updated successfully!');
     res.redirect('/admin/deals');
   } catch (error) {
     logger.error('Deal update failed', { error: error.message });
+    if (req.headers['content-type'] === 'application/json') {
+      return res.status(500).json({ success: false, message: `Failed to update deal: ${error.message}` });
+    }
     req.flash('error', `Failed to update deal: ${error.message}`);
     res.redirect('/admin/deals');
   }
@@ -132,6 +175,12 @@ exports.deleteDeal = async (req, res) => {
       where: { id: Number(id) }
     });
 
+    logger.info('Deal deleted successfully', { dealId: id });
+    
+    // Invalidate deal caches
+    await deleteCachePattern('deals:*');
+    await deleteCachePattern('admin:dashboard:*');
+    
     req.flash('success', 'Deal deleted successfully!');
     res.redirect('/admin/deals');
   } catch (error) {
@@ -144,17 +193,26 @@ exports.deleteDeal = async (req, res) => {
 // Get active deals
 exports.getActiveDeals = async (req, res) => {
   try {
-    const activeDeals = await req.prisma.deal.findMany({
-      where: {
-        isActive: true,
-        validUntil: {
-          gte: new Date()
+    // Try to get from cache
+    const cacheKey = 'deals:active:list';
+    let activeDeals = await getCache(cacheKey);
+    
+    if (!activeDeals) {
+      activeDeals = await req.prisma.deal.findMany({
+        where: {
+          isActive: true,
+          validUntil: {
+            gte: new Date()
+          }
+        },
+        orderBy: {
+          validUntil: 'asc'
         }
-      },
-      orderBy: {
-        validUntil: 'asc'
-      }
-    });
+      });
+      
+      // Cache for 10 minutes
+      await setCache(cacheKey, activeDeals, 600);
+    }
     
     // Remove codeHash from response (for security)
     const safeDeals = activeDeals.map(deal => ({

@@ -163,6 +163,7 @@
         <h3 class="text-xl font-bold mb-4">Write a Review</h3>
         <div class="bg-white rounded-lg shadow-md p-6">
           <form action="/reviews/create" method="POST" class="space-y-4">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="vehicleId" value="<%= vehicle.id %>">
             
             <div>

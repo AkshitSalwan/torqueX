@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
+    "start:no-clerk": "SKIP_CLERK=true node ./bin/www",
     "dev": "nodemon ./bin/www",
+    "dev:no-clerk": "SKIP_CLERK=true nodemon ./bin/www",
     "build:css": "npx tailwindcss -i ./public/stylesheets/tailwind.css -o ./public/stylesheets/style.css --watch",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
@@ -18,7 +20,8 @@
     "test:verbose": "jest --verbose --colors",
     "test:e2e": "jest --config jest-e2e.config.js --colors",
     "test:e2e:headed": "HEADLESS=false jest --config jest-e2e.config.js --colors",
-    "test:all": "npm test && npm run test:e2e"
+    "test:all": "npm test && npm run test:e2e",
+    "verify:redis": "node ./scripts/verify-redis.js"
   },
   "dependencies": {
     "@clerk/clerk-sdk-node": "^4.12.2",
