@@ -3,9 +3,24 @@
  * Handles home page, about page, and contact page
  */
 
+const { getCache, setCache } = require('../utils/redis');
+
 // Home page controller
 exports.getHomePage = async (req, res) => {
   try {
+    const cacheKey = 'homepage:featured';
+    
+    // Try to get from cache
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.render('index', { 
+        title: 'TorqueX - Premium Vehicle Rentals',
+        featuredVehicles: cached.featuredVehicles,
+        activeDeal: cached.activeDeal,
+        user: req.user || null
+      });
+    }
+    
     // Get featured vehicles and active deals
     const featuredVehicles = await req.prisma.vehicle.findMany({
       where: { availability: true },
@@ -25,6 +40,9 @@ exports.getHomePage = async (req, res) => {
         validUntil: 'asc'
       }
     });
+    
+    // Cache for 3 minutes
+    await setCache(cacheKey, { featuredVehicles, activeDeal }, 180);
 
     res.render('index', { 
       title: 'TorqueX - Premium Vehicle Rentals',

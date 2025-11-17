@@ -257,6 +257,8 @@ exports.getBookingPayment = async (req, res) => {
       duration,
       clientSecret,
       stripePublicKey: process.env.STRIPE_PUBLISHABLE_KEY || process.env.STRIPE_PUBLIC_KEY,
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || '',
+      csrfToken: req.session.csrfToken,
       user: req.user
     });
   } catch (error) {
@@ -398,27 +400,38 @@ exports.getBookingConfirmation = async (req, res) => {
     if (!booking) {
       return res.status(404).render('error', { 
         message: 'Booking not found',
-        error: { status: 404 }
+        error: { status: 404 },
+        csrfToken: req.session.csrfToken,
+        clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || '',
+        user: req.user || null
       });
     }
     
     if (booking.userId !== req.user.id) {
       return res.status(403).render('error', { 
         message: 'Unauthorized',
-        error: { status: 403 }
+        error: { status: 403 },
+        csrfToken: req.session.csrfToken,
+        clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || '',
+        user: req.user || null
       });
     }
     
     res.render('bookings/confirmation', { 
       title: 'Booking Confirmation',
       booking,
+      csrfToken: req.session.csrfToken,
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || '',
       user: req.user
     });
   } catch (error) {
     console.error('Get booking confirmation error:', error);
     res.status(500).render('error', { 
       message: 'Error loading confirmation page',
-      error: req.app.get('env') === 'development' ? error : {}
+      error: req.app.get('env') === 'development' ? error : {},
+      csrfToken: req.session.csrfToken,
+      clerkPublishableKey: process.env.CLERK_PUBLISHABLE_KEY || '',
+      user: req.user || null
     });
   }
 };

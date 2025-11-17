@@ -57,10 +57,12 @@ app.use(express.static(path.join(__dirname, 'public')));
 let redisClient;
 (async () => {
   try {
+    console.log('[INFO] Initializing Redis connection...');
     redisClient = await initRedis();
+    console.log('[INFO] Redis initialized successfully');
   } catch (error) {
-    console.error('Failed to initialize Redis:', error);
-    console.warn('Application will continue with in-memory session store');
+    console.error('[ERROR] Failed to initialize Redis:', error.message);
+    console.warn('[WARN] Application will continue with in-memory session store');
   }
 })();
 

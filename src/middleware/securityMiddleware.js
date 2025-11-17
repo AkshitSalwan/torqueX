@@ -29,7 +29,7 @@ exports.securityHeaders = (req, res, next) => {
   // Content Security Policy
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest https://apis.google.com https://www.chatbase.co; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' https://api.stripe.com https://api.clerk.com https://www.chatbase.co wss: ws:"
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://cdn.jsdelivr.net https://unpkg.com https://cdn.jsdelivr.net/npm/@clerk/clerk-js@latest https://modest-beagle-30.clerk.accounts.dev https://apis.google.com https://www.chatbase.co; style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; img-src 'self' data: https:; font-src 'self' https://cdn.jsdelivr.net https://unpkg.com; connect-src 'self' https://api.stripe.com https://api.clerk.com https://modest-beagle-30.clerk.accounts.dev https://www.chatbase.co wss: ws:; frame-src https://js.stripe.com"
   );
   
   // Referrer Policy

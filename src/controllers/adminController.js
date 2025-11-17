@@ -84,9 +84,8 @@ exports.getDashboard = async (req, res) => {
             select: {
               id: true,
               name: true,
-              make: true,
-              model: true,
-              year: true
+              type: true,
+              pricePerDay: true
             }
           },
           user: {
@@ -1094,12 +1093,29 @@ exports.updateBookingStatus = async (req, res) => {
 // Get broadcasts for admin
 exports.getBroadcastsAdmin = async (req, res) => {
   try {
+    const cacheKey = 'broadcasts:all';
+    
+    // Try to get from cache first
+    const cached = await getCache(cacheKey);
+    if (cached) {
+      return res.render('admin/broadcasts', {
+        title: 'Manage Broadcasts',
+        broadcasts: cached,
+        user: req.user,
+        successMessages: req.flash('success'),
+        errorMessages: req.flash('error')
+      });
+    }
+    
     // Get all broadcasts
     const broadcasts = await req.prisma.broadcast.findMany({
       orderBy: {
         createdAt: 'desc'
       }
     });
+    
+    // Cache for 2 minutes
+    await setCache(cacheKey, broadcasts, 120);
     
     res.render('admin/broadcasts', {
       title: 'Manage Broadcasts',
@@ -1178,6 +1194,9 @@ exports.createBroadcast = async (req, res) => {
         adminId: adminId
       }
     });
+    
+    // Invalidate broadcasts cache
+    await deleteCachePattern('broadcasts:*');
     
     // Socket.io notification would go here if socket is available
     if (req.app.get('io')) {
@@ -1574,5 +1593,114 @@ exports.deleteDeal = async (req, res) => {
     
     req.flash('error', `Error deleting deal: ${error.message}`);
     res.redirect('/admin/deals');
+  }
+};
+
+// Cache Viewer - View all cached data
+exports.getCacheViewer = async (req, res) => {
+  try {
+    const redisClient = getRedisClient();
+    
+    if (!redisClient || !redisClient.isReady) {
+      return res.render('admin/cache-viewer', {
+        title: 'Cache Viewer',
+        user: req.user,
+        error: 'Redis is not connected',
+        keys: [],
+        cacheData: {},
+        totalKeys: 0
+      });
+    }
+    
+    // Get all keys
+    const keys = await redisClient.keys('*');
+    
+    // Get data for each key
+    const cacheData = {};
+    for (const key of keys) {
+      try {
+        const type = await redisClient.type(key);
+        const ttl = await redisClient.ttl(key);
+        
+        let value;
+        if (type === 'string') {
+          value = await redisClient.get(key);
+          // Try to parse as JSON
+          try {
+            value = JSON.parse(value);
+          } catch (e) {
+            // Keep as string if not JSON
+          }
+        } else if (type === 'hash') {
+          value = await redisClient.hGetAll(key);
+        } else if (type === 'list') {
+          value = await redisClient.lRange(key, 0, -1);
+        } else if (type === 'set') {
+          value = await redisClient.sMembers(key);
+        }
+        
+        cacheData[key] = {
+          type,
+          ttl: ttl === -1 ? 'No expiry' : `${ttl}s`,
+          value
+        };
+      } catch (error) {
+        console.error(`Error getting data for key ${key}:`, error);
+        cacheData[key] = { error: error.message };
+      }
+    }
+    
+    res.render('admin/cache-viewer', {
+      title: 'Redis Cache Viewer',
+      user: req.user,
+      error: null,
+      keys,
+      cacheData,
+      totalKeys: keys.length
+    });
+  } catch (error) {
+    console.error('Cache viewer error:', error);
+    res.status(500).render('error', {
+      message: 'Error loading cache viewer',
+      error: req.app.get('env') === 'development' ? error : {},
+      user: req.user
+    });
+  }
+};
+
+// Clear Cache - Clear specific pattern or all cache
+exports.clearCache = async (req, res) => {
+  try {
+    const { pattern } = req.body;
+    const redisClient = getRedisClient();
+    
+    if (!redisClient || !redisClient.isReady) {
+      return res.status(500).json({
+        success: false,
+        message: 'Redis is not connected'
+      });
+    }
+    
+    if (pattern && pattern !== '*') {
+      // Clear specific pattern
+      await deleteCachePattern(pattern);
+      return res.json({
+        success: true,
+        message: `Cache cleared for pattern: ${pattern}`
+      });
+    } else {
+      // Clear all cache
+      await redisClient.flushDb();
+      return res.json({
+        success: true,
+        message: 'All cache cleared successfully'
+      });
+    }
+  } catch (error) {
+    console.error('Clear cache error:', error);
+    res.status(500).json({
+      success: false,
+      message: `Error clearing cache: ${error.message}`
+    });
   }
 };

@@ -49,6 +49,8 @@ router.use(requireAuth, requireAdmin);
 router.get('/dashboard', adminController.getDashboard);
 router.get('/stats', adminController.getStats);
 router.get('/redis-status', adminController.getRedisStatus);
+router.get('/cache-viewer', adminController.getCacheViewer);
+router.post('/cache-clear', adminController.clearCache);
 
 // Vehicle management
 router.get('/vehicles', adminController.getVehiclesAdmin);

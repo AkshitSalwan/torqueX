@@ -14,6 +14,12 @@ let isConnected = false;
  * Initialize Redis client
  */
 const initRedis = async () => {
+  // Return existing client if already initialized
+  if (redisClient && isConnected) {
+    logger.info('Redis: Using existing connection');
+    return redisClient;
+  }
+  
   try {
     // Create Redis client with credentials
     redisClient = createClient({
@@ -104,6 +110,7 @@ const isRedisConnected = () => isConnected;
  */
 const setCache = async (key, value, ttl = 300) => {
   try {
+    console.log(`[DEBUG] setCache called: key=${key}, isConnected=${isConnected}`);
     if (!isConnected) {
       logger.warn('Redis not connected, skipping cache set');
       return false;
@@ -111,6 +118,7 @@ const setCache = async (key, value, ttl = 300) => {
     
     const stringValue = typeof value === 'string' ? value : JSON.stringify(value);
     await redisClient.setEx(key, ttl, stringValue);
+    console.log(`[DEBUG] Cache set successfully: ${key}`);
     return true;
   } catch (error) {
     logger.error(`Redis: Error setting cache for key ${key}`, error);
