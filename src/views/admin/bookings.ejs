@@ -198,6 +198,7 @@
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
+            'x-csrf-token': '<%= csrfToken %>'
           },
           body: JSON.stringify({ status: newStatus }),
         });

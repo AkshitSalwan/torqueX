@@ -31,9 +31,11 @@ router.get('/redis-status', async (req, res) => {
     
     // Try to ping Redis
     let pingResponse = null;
+    let keys = [];
     if (isReady) {
       try {
         pingResponse = await redisClient.ping();
+        keys = await redisClient.keys('*');
       } catch (error) {
         pingResponse = `Error: ${error.message}`;
       }
@@ -43,8 +45,11 @@ router.get('/redis-status', async (req, res) => {
       status: isReady ? 'connected' : 'disconnected',
       integrated: true,
       connected: isReady,
+      isReady: isReady,
       isOpen: isOpen,
       ping: pingResponse,
+      keys: keys,
+      success: isReady,
       message: isReady ? 'Redis is integrated and connected' : 'Redis is integrated but not connected'
     });
   } catch (error) {

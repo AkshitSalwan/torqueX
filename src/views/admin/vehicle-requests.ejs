@@ -151,14 +151,14 @@
               </tr>
             </thead>
             <tbody class="bg-white divide-y divide-gray-200">
-              <% if (requests.length === 0) { %>
+              <% if (vehicleRequests.length === 0) { %>
                 <tr>
                   <td colspan="5" class="px-6 py-4 text-center text-gray-500">
                     No vehicle requests found
                   </td>
                 </tr>
               <% } else { %>
-                <% requests.forEach(request => { %>
+                <% vehicleRequests.forEach(request => { %>
                   <tr>
                     <td class="px-6 py-4 whitespace-nowrap">
                       <div class="flex items-center">

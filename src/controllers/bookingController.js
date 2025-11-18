@@ -511,25 +511,19 @@ exports.cancelBooking = async (req, res) => {
     });
     
     if (!booking) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Booking not found' 
-      });
+      req.flash('error', 'Booking not found');
+      return res.redirect('/user/bookings');
     }
     
     if (booking.userId !== req.user.id) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Unauthorized' 
-      });
+      req.flash('error', 'You are not authorized to cancel this booking');
+      return res.redirect('/user/bookings');
     }
     
     // Only allow cancellation of pending or confirmed bookings
     if (booking.status !== 'PENDING' && booking.status !== 'CONFIRMED') {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Cannot cancel booking with current status' 
-      });
+      req.flash('error', 'Cannot cancel booking with current status');
+      return res.redirect('/user/bookings');
     }
     
     // Check if cancellation is allowed (e.g., not too close to start date)
@@ -538,29 +532,23 @@ exports.cancelBooking = async (req, res) => {
     const daysDifference = Math.ceil((startDate - currentDate) / (1000 * 60 * 60 * 24));
     
     if (daysDifference < 1) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Cancellation is not allowed less than 24 hours before start date' 
-      });
+      req.flash('error', 'Cancellation is not allowed less than 24 hours before start date');
+      return res.redirect('/user/bookings');
     }
     
     // Update booking status
-    const updatedBooking = await req.prisma.booking.update({
+    await req.prisma.booking.update({
       where: { id },
       data: {
         status: 'CANCELLED'
       }
     });
     
-    res.status(200).json({ 
-      success: true, 
-      booking: updatedBooking 
-    });
+    req.flash('success', 'Booking cancelled successfully');
+    res.redirect('/user/bookings');
   } catch (error) {
     console.error('Cancel booking error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Error cancelling booking' 
-    });
+    req.flash('error', 'Error cancelling booking. Please try again.');
+    res.redirect('/user/bookings');
   }
 };

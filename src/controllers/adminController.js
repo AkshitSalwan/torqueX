@@ -219,7 +219,9 @@ exports.getDashboard = async (req, res) => {
       connected: false,
       status: 'disconnected',
       ping: null,
-      error: null
+      error: null,
+      cacheKeys: [],
+      totalKeys: 0
     };
 
     try {
@@ -228,6 +230,34 @@ exports.getDashboard = async (req, res) => {
         redisStatus.status = redisClient.isReady ? 'connected' : 'disconnected';
         if (redisClient.isReady) {
           redisStatus.ping = await redisClient.ping();
+          
+          // Get all cache keys
+          const allKeys = await redisClient.keys('*');
+          redisStatus.totalKeys = allKeys.length;
+          
+          // Get detailed info about cache keys
+          const cacheInfo = [];
+          const patterns = {
+            'vehicles:': { name: 'Vehicles', color: 'green' },
+            'deals:': { name: 'Deals', color: 'blue' },
+            'user:': { name: 'User Bookings', color: 'purple' },
+            'broadcasts:': { name: 'Broadcasts', color: 'yellow' },
+            'sess:': { name: 'Sessions', color: 'gray' }
+          };
+          
+          for (const [pattern, info] of Object.entries(patterns)) {
+            const keys = allKeys.filter(k => k.startsWith(pattern));
+            if (keys.length > 0) {
+              cacheInfo.push({
+                name: info.name,
+                count: keys.length,
+                color: info.color,
+                keys: keys.slice(0, 3) // Show first 3 keys as examples
+              });
+            }
+          }
+          
+          redisStatus.cacheKeys = cacheInfo;
         }
       }
     } catch (error) {
@@ -1234,8 +1264,11 @@ exports.createBroadcast = async (req, res) => {
 // Get all vehicle requests for admin
 exports.getVehicleRequests = async (req, res) => {
   try {
-    // Get status filter from query params (default to 'all')
+    // Get status filter and pagination from query params
     const statusFilter = req.query.status || 'all';
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10;
+    const skip = (page - 1) * limit;
     
     // Build the where clause based on status
     let whereClause = {};
@@ -1243,7 +1276,14 @@ exports.getVehicleRequests = async (req, res) => {
       whereClause.status = statusFilter.toUpperCase();
     }
     
-    // Get vehicle requests with optional status filter
+    // Get total count for pagination
+    const totalRequests = await req.prisma.vehicleRequest.count({
+      where: whereClause
+    });
+    
+    const totalPages = Math.ceil(totalRequests / limit);
+    
+    // Get vehicle requests with optional status filter and pagination
     const vehicleRequests = await req.prisma.vehicleRequest.findMany({
       where: whereClause,
       orderBy: {
@@ -1251,13 +1291,19 @@ exports.getVehicleRequests = async (req, res) => {
       },
       include: {
         user: true
-      }
+      },
+      skip,
+      take: limit
     });
     
     res.render('admin/vehicle-requests', {
       title: 'Vehicle Requests',
       vehicleRequests,
       currentStatus: statusFilter,
+      page,
+      totalPages,
+      totalRequests,
+      limit,
       user: req.user,
       successMessages: req.flash('success'),
       errorMessages: req.flash('error')
