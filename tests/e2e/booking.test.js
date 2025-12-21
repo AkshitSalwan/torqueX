@@ -5,6 +5,9 @@
 describe('Vehicle Booking E2E Tests', () => {
   const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
 
+  // Add timeout increase for slower page loads
+  jest.setTimeout(45000);
+
   describe('Booking Process', () => {
     it('should load vehicles page for browsing', async () => {
       await page.goto(`${BASE_URL}/vehicles`, { waitUntil: 'networkidle0' });

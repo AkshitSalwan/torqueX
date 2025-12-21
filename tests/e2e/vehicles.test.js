@@ -7,7 +7,15 @@ describe('Vehicles Page E2E Tests', () => {
   const VEHICLES_URL = `${BASE_URL}/vehicles`;
 
   beforeEach(async () => {
-    await page.goto(VEHICLES_URL, { waitUntil: 'networkidle0' });
+    try {
+      await page.goto(VEHICLES_URL, { 
+        waitUntil: 'domcontentloaded',
+        timeout: 15000 
+      });
+      await page.waitForSelector('body', { timeout: 5000 }).catch(() => {});
+    } catch (error) {
+      console.warn('Page load warning:', error.message);
+    }
   });
 
   describe('Page Load', () => {

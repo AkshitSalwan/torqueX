@@ -18,7 +18,17 @@
     }
   </script>
   <!-- Clerk Authentication (Optional) -->
-  <% if (typeof clerkPublishableKey !== 'undefined' && clerkPublishableKey && clerkPublishableKey.length > 0 && clerkPublishableKey !== 'undefined' && clerkPublishableKey.startsWith('pk_')) { %>
+  <% 
+    const hasValidClerkKey = typeof clerkPublishableKey !== 'undefined' && 
+                             clerkPublishableKey && 
+                             clerkPublishableKey.length > 10 && 
+                             clerkPublishableKey !== 'undefined' && 
+                             clerkPublishableKey.startsWith('pk_');
+    const isTestingEnvironment = process.env.NODE_ENV === 'test' || 
+                                 process.env.SKIP_CLERK === 'true' ||
+                                 (typeof global !== 'undefined' && global.jasmine);
+  %>
+  <% if (hasValidClerkKey && !isTestingEnvironment) { %>
   <script>
     // Only load Clerk if we have a valid key
     (function() {

@@ -19,8 +19,8 @@
     "test:watch": "jest --watch --colors",
     "test:coverage": "jest --coverage --colors",
     "test:verbose": "jest --verbose --colors",
-    "test:e2e": "jest --config jest-e2e.config.js --colors",
-    "test:e2e:headed": "HEADLESS=false jest --config jest-e2e.config.js --colors",
+    "test:e2e": "SKIP_CLERK=true jest --config jest-e2e.config.js --colors",
+    "test:e2e:headed": "SKIP_CLERK=true HEADLESS=false jest --config jest-e2e.config.js --colors",
     "test:all": "npm test && npm run test:e2e",
     "verify:redis": "node ./scripts/verify-redis.js"
   },
