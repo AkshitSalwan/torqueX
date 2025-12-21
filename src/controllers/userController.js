@@ -186,12 +186,43 @@ exports.getProfile = async (req, res) => {
       where: { id: userId }
     });
     
-    // Decrypt sensitive fields for display
+    if (!user) {
+      return res.status(404).render('error', { 
+        title: 'Error',
+        message: 'User not found',
+        error: {},
+        user: req.user || null
+      });
+    }
+    
+    // Decrypt sensitive fields for display - handle errors gracefully
     const decryptedUser = {
       ...user,
-      phone: user.phone ? crypto.decryptField(user.phone) : null,
-      address: user.address ? crypto.decryptField(user.address) : null
+      phone: null,
+      address: null
     };
+    
+    // Try to decrypt phone if it exists
+    if (user.phone) {
+      try {
+        decryptedUser.phone = crypto.decryptField(user.phone);
+      } catch (error) {
+        logger.warn('Failed to decrypt phone field', { userId, error: error.message });
+        // Leave as null or show the original if it's plain text
+        decryptedUser.phone = null;
+      }
+    }
+    
+    // Try to decrypt address if it exists
+    if (user.address) {
+      try {
+        decryptedUser.address = crypto.decryptField(user.address);
+      } catch (error) {
+        logger.warn('Failed to decrypt address field', { userId, error: error.message });
+        // Leave as null or show the original if it's plain text
+        decryptedUser.address = null;
+      }
+    }
     
     res.render('user/profile', { 
       title: 'My Profile',
@@ -200,7 +231,7 @@ exports.getProfile = async (req, res) => {
       errorMessage: req.flash('error')
     });
   } catch (error) {
-    logger.error('Profile retrieval failed', { error: error.message });
+    logger.error('Profile retrieval failed', { error: error.message, stack: error.stack });
     res.status(500).render('error', { 
       title: 'Error',
       message: 'Error loading profile',

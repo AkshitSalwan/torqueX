@@ -41,22 +41,6 @@
           </a>
         </li>
         <li>
-          <a href="/admin/users" class="flex items-center px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-md">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-            Users
-          </a>
-        </li>
-        <li>
-          <a href="/admin/deals" class="flex items-center px-4 py-2 text-gray-300 hover:bg-gray-700 rounded-md">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Deals
-          </a>
-        </li>
-        <li>
           <a href="/admin/stats" class="flex items-center px-4 py-2 text-gray-200 bg-gray-700 rounded-md">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
@@ -77,10 +61,10 @@
   </div>
 
   <!-- Main Content -->
-  <div class="flex-1 bg-gray-100">
-    <header class="bg-white shadow">
+  <div class="flex-1 bg-gray-900">
+    <header class="bg-gray-800 shadow">
       <div class="max-w-7xl mx-auto py-4 px-6">
-        <h1 class="text-2xl font-bold text-gray-900">Statistics Dashboard</h1>
+        <h1 class="text-2xl font-bold text-white">Statistics Dashboard</h1>
       </div>
     </header>
 
@@ -89,11 +73,11 @@
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <!-- Total Vehicles -->
-          <div class="bg-white p-6 rounded-lg shadow">
+          <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm font-medium text-gray-600">Total Vehicles</p>
-                <p class="text-3xl font-bold text-gray-900"><%= stats.vehicleCount %></p>
+                <p class="text-sm font-medium text-gray-300">Total Vehicles</p>
+                <p class="text-3xl font-bold text-gray-100"><%= stats.vehicleCount %></p>
               </div>
               <div class="p-3 bg-blue-100 rounded-full">
                 <svg class="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -104,11 +88,11 @@
           </div>
 
           <!-- Total Users -->
-          <div class="bg-white p-6 rounded-lg shadow">
+          <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm font-medium text-gray-600">Total Users</p>
-                <p class="text-3xl font-bold text-gray-900"><%= stats.userCount.toLocaleString() %></p>
+                <p class="text-sm font-medium text-gray-300">Total Users</p>
+                <p class="text-3xl font-bold text-gray-100"><%= stats.userCount.toLocaleString() %></p>
               </div>
               <div class="p-3 bg-green-100 rounded-full">
                 <svg class="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -119,11 +103,11 @@
           </div>
 
           <!-- Active Bookings -->
-          <div class="bg-white p-6 rounded-lg shadow">
+          <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm font-medium text-gray-600">Active Bookings</p>
-                <p class="text-3xl font-bold text-gray-900"><%= stats.activeBookings %></p>
+                <p class="text-sm font-medium text-gray-300">Active Bookings</p>
+                <p class="text-3xl font-bold text-gray-100"><%= stats.activeBookings %></p>
               </div>
               <div class="p-3 bg-yellow-100 rounded-full">
                 <svg class="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -134,11 +118,11 @@
           </div>
 
           <!-- Monthly Revenue -->
-          <div class="bg-white p-6 rounded-lg shadow">
+          <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
             <div class="flex items-center justify-between">
               <div>
-                <p class="text-sm font-medium text-gray-600">Monthly Revenue</p>
-                <p class="text-3xl font-bold text-gray-900">$<%= (stats.monthlyRevenue || 0).toLocaleString() %></p>
+                <p class="text-sm font-medium text-gray-300">Monthly Revenue</p>
+                <p class="text-3xl font-bold text-gray-100">$<%= (stats.monthlyRevenue || 0).toLocaleString() %></p>
               </div>
               <div class="p-3 bg-purple-100 rounded-full">
                 <svg class="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,27 +134,27 @@
         </div>      <!-- Detailed Stats -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         <!-- Revenue Stats -->
-        <div class="bg-white shadow rounded-lg p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Revenue Overview</h3>
+        <div class="bg-gray-800 shadow-lg rounded-lg p-6">
+          <h3 class="text-lg font-medium text-gray-100 mb-4">Revenue Overview</h3>
           <div class="space-y-4">
             <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-600">Total Revenue</span>
-              <span class="text-lg font-semibold text-green-600">$<%= stats?.totalRevenue || 0 %></span>
+              <span class="text-sm text-gray-300">Total Revenue</span>
+              <span class="text-lg font-semibold text-green-400">$<%= stats?.totalRevenue || 0 %></span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-600">This Month</span>
-              <span class="text-lg font-semibold text-blue-600">$<%= stats?.monthlyRevenue || 0 %></span>
+              <span class="text-sm text-gray-300">This Month</span>
+              <span class="text-lg font-semibold text-blue-400">$<%= stats?.monthlyRevenue || 0 %></span>
             </div>
             <div class="flex justify-between items-center">
-              <span class="text-sm text-gray-600">Average per Booking</span>
-              <span class="text-lg font-semibold text-gray-900">$<%= stats?.avgBookingValue || 0 %></span>
+              <span class="text-sm text-gray-300">Average per Booking</span>
+              <span class="text-lg font-semibold text-gray-100">$<%= stats?.avgBookingValue || 0 %></span>
             </div>
           </div>
         </div>
 
         <!-- Vehicle Types -->
-        <div class="bg-white shadow rounded-lg p-6">
-          <h3 class="text-lg font-medium text-gray-900 mb-4">Vehicle Categories</h3>
+        <div class="bg-gray-800 shadow-lg rounded-lg p-6">
+          <h3 class="text-lg font-medium text-gray-100 mb-4">Vehicle Categories</h3>
           <div class="space-y-3">
             <% if (stats?.vehicleTypes && stats.vehicleTypes.length > 0) { %>
               <% 
@@ -179,31 +163,31 @@
               %>
               <% stats.vehicleTypes.forEach(type => { %>
                 <div class="flex justify-between items-center mb-1">
-                  <span class="text-sm text-gray-600"><%= type.type %></span>
-                  <span class="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                  <span class="text-sm text-gray-300"><%= type.type %></span>
+                  <span class="px-2 py-1 bg-blue-900/50 text-blue-300 text-xs rounded-full">
                     <%= type.count %> (<%= Math.round((type.count / totalVehicles) * 100) %>%)
                   </span>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-2 mb-3">
-                  <div class="bg-blue-600 h-2 rounded-full" 
+                <div class="w-full bg-gray-700 rounded-full h-2 mb-3">
+                  <div class="bg-blue-500 h-2 rounded-full" 
                        style="width: <%= Math.round((type.count / totalVehicles) * 100) %>%"></div>
                 </div>
               <% }) %>
             <% } else { %>
-              <p class="text-gray-500">No vehicle data available</p>
+              <p class="text-gray-400">No vehicle data available</p>
             <% } %>
           </div>
         </div>
       </div>
 
       <!-- Recent Activity -->
-      <div class="bg-white shadow rounded-lg">
-        <div class="px-6 py-4 border-b border-gray-200">
-          <h3 class="text-lg font-medium text-gray-900">Recent Bookings</h3>
+      <div class="bg-gray-800 shadow-lg rounded-lg">
+        <div class="px-6 py-4 border-b border-gray-700">
+          <h3 class="text-lg font-medium text-white">Recent Bookings</h3>
         </div>
         <div class="overflow-x-auto">
           <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Vehicle</th>
@@ -212,17 +196,17 @@
                 <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
               </tr>
             </thead>
-            <tbody class="bg-white divide-y divide-gray-200">
+            <tbody class="bg-gray-700 divide-y divide-gray-600">
               <% if (recentBookings && recentBookings.length > 0) { %>
                 <% recentBookings.forEach(booking => { %>
                   <tr>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
                       <%= booking.user?.name || 'N/A' %>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
                       <%= booking.vehicle?.name || (booking.vehicle?.type ? booking.vehicle.type + ' Vehicle' : 'Unknown Vehicle') %>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                       <%= booking.createdAt ? new Date(booking.createdAt).toLocaleDateString() : 'N/A' %>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -230,28 +214,26 @@
                       let statusClass = '';
                       switch(booking.status) {
                         case 'ACTIVE':
-                          statusClass = 'bg-green-100 text-green-800';
+                          statusClass = 'bg-green-900/30 text-green-200';
                           break;
                         case 'COMPLETED':
-                          statusClass = 'bg-blue-100 text-blue-800';
+                          statusClass = 'bg-blue-900/30 text-blue-200';
                           break;
                         case 'CANCELLED':
-                          statusClass = 'bg-red-100 text-red-800';
+                          statusClass = 'bg-red-900/30 text-red-200';
                           break;
                         case 'PENDING':
-                          statusClass = 'bg-yellow-100 text-yellow-800';
+                          statusClass = 'bg-yellow-900/30 text-yellow-200';
                           break;
                         default:
-                          statusClass = 'bg-gray-100 text-gray-800';
+                          statusClass = 'bg-gray-700 text-gray-200';
                       }
                       %>
                       <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full <%= statusClass %>">
-                            booking.status === 'COMPLETED' ? 'bg-blue-100 text-blue-800' : 
-                            'bg-red-100 text-red-800' %>">
                         <%= booking.status %>
                       </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-100">
                       $<%= (booking.totalPrice || 0).toLocaleString() %>
                     </td>
                   </tr>

@@ -42,3 +42,15 @@ logs
 *.tmp
 *.temp
 .cache/
+# SSL certificates (keep private!)
+ssl/*.key
+ssl/*.pem
+ssl/*.crt
+ssl/*.cert
+!ssl/.gitkeep
+.env.backup
+TorqueX.key
+*.pem
+*.key
+ssl/*.key
+ssl/*.pem

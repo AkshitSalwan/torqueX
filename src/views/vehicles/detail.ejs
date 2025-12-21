@@ -1,94 +1,91 @@
 <%- include('../partials/header') %>
+<link rel="stylesheet" href="/stylesheets/vehicles.css">
 
-<div class="container mx-auto px-4 py-12">
-  <div class="mb-8">
-    <a href="/vehicles" class="inline-flex items-center text-blue-600 hover:text-blue-800">
-      <svg class="h-5 w-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
-      </svg>
-      Back to Vehicles
-    </a>
-  </div>
+<div class="vehicle-detail-container">
+  <a href="/vehicles" class="vehicle-back-btn">
+    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path>
+    </svg>
+    Back to Vehicles
+  </a>
   
-  <div class="bg-white rounded-lg shadow-md overflow-hidden">
-    <div class="flex flex-col lg:flex-row">
+  <div class="vehicle-detail-card">
+    <div class="vehicle-detail-layout">
       <!-- Vehicle Image -->
-      <div class="w-full lg:w-1/2">
-        <div class="h-full">
-          <img 
-            src="<%= vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : '/images/placeholder-car.jpg' %>" 
-            alt="<%= vehicle.name %>" 
-            class="w-full h-full object-cover"
-            onerror="this.src='/images/placeholder-car.jpg'; this.onerror=null;"
-          >
-        </div>
+      <div class="vehicle-detail-image-wrapper">
+        <img 
+          src="<%= vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : '/images/placeholder-car.jpg' %>" 
+          alt="<%= vehicle.name %>" 
+          class="vehicle-detail-image"
+          onerror="this.src='/images/placeholder-car.jpg'; this.onerror=null;"
+        >
       </div>
       
       <!-- Vehicle Details -->
-      <div class="w-full lg:w-1/2 p-8">
-        <div class="flex justify-between items-start mb-4">
-          <h1 class="text-3xl font-bold"><%= vehicle.name %></h1>
-          <span class="px-3 py-1 bg-blue-100 text-blue-800 text-sm font-semibold rounded-full">
+      <div class="vehicle-detail-content">
+        <div class="vehicle-detail-header">
+          <h1 class="vehicle-detail-title"><%= vehicle.name %></h1>
+          <span class="vehicle-detail-type-badge">
             <%= vehicle.type %>
           </span>
         </div>
         
-        <div class="flex items-center mb-6">
-          <div class="flex items-center">
+        <div class="vehicle-rating">
+          <div class="vehicle-stars">
             <% for(let i = 1; i <= 5; i++) { %>
-              <svg class="h-5 w-5 <%= i <= Math.round(avgRating) ? 'text-yellow-400' : 'text-gray-300' %>" fill="currentColor" viewBox="0 0 20 20">
+              <svg class="<%= i <= Math.round(avgRating) ? 'star-filled' : 'star-empty' %>" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"></path>
               </svg>
             <% } %>
           </div>
-          <span class="ml-2 text-gray-600"><%= avgRating.toFixed(1) %> (<%= vehicle.reviews.length %> reviews)</span>
+          <span class="vehicle-rating-text"><%= avgRating.toFixed(1) %> (<%= vehicle.reviews.length %> reviews)</span>
         </div>
         
-        <p class="text-gray-700 mb-6">
+        <p class="vehicle-description">
           <%= vehicle.description || 'No description available' %>
         </p>
         
         <% if (vehicle.specs) { %>
-        <div class="grid grid-cols-2 gap-4 mb-8">
+        <div class="vehicle-specs-grid">
           <% if (vehicle.specs.seats) { %>
-          <div>
-            <h3 class="text-sm font-medium text-gray-500">Seats</h3>
-            <p class="text-lg font-medium"><%= vehicle.specs.seats %></p>
+          <div class="vehicle-spec-item">
+            <h3 class="vehicle-spec-label">Seats</h3>
+            <p class="vehicle-spec-value"><%= vehicle.specs.seats %></p>
           </div>
           <% } %>
           <% if (vehicle.specs.transmission) { %>
-          <div>
-            <h3 class="text-sm font-medium text-gray-500">Transmission</h3>
-            <p class="text-lg font-medium"><%= vehicle.specs.transmission %></p>
+          <div class="vehicle-spec-item">
+            <h3 class="vehicle-spec-label">Transmission</h3>
+            <p class="vehicle-spec-value"><%= vehicle.specs.transmission %></p>
           </div>
           <% } %>
           <% if (vehicle.specs.fuelType) { %>
-          <div>
-            <h3 class="text-sm font-medium text-gray-500">Fuel Type</h3>
-            <p class="text-lg font-medium"><%= vehicle.specs.fuelType %></p>
+          <div class="vehicle-spec-item">
+            <h3 class="vehicle-spec-label">Fuel Type</h3>
+            <p class="vehicle-spec-value"><%= vehicle.specs.fuelType %></p>
           </div>
           <% } %>
           <% if (vehicle.specs.year) { %>
-          <div>
-            <h3 class="text-sm font-medium text-gray-500">Year</h3>
-            <p class="text-lg font-medium"><%= vehicle.specs.year %></p>
+          <div class="vehicle-spec-item">
+            <h3 class="vehicle-spec-label">Year</h3>
+            <p class="vehicle-spec-value"><%= vehicle.specs.year %></p>
           </div>
           <% } %>
         </div>
         <% } %>
         
-        <div class="flex items-center justify-between mb-8">
-          <div>
-            <h3 class="text-sm font-medium text-gray-500">Price Per Day</h3>
-            <p class="text-3xl font-bold text-blue-600">$<%= vehicle.pricePerDay %></p>
+        <div class="vehicle-pricing-section">
+          <div class="vehicle-pricing-info">
+            <h3>Price Per Day</h3>
+            <p class="vehicle-detail-price">$<%= vehicle.pricePerDay %></p>
           </div>
           <div>
             <% if (vehicle.availability) { %>
-              <a href="/bookings/create?vehicleId=<%= vehicle.id %>" class="inline-block bg-blue-600 text-white py-3 px-6 rounded-lg hover:bg-blue-700 transition duration-300">
+              <a href="/bookings/create?vehicleId=<%= vehicle.id %>" class="vehicle-book-btn">
                 Book Now
               </a>
             <% } else { %>
-              <div class="px-4 py-2 bg-red-100 text-red-800 text-sm font-medium rounded-lg">
+              <div class="vehicle-unavailable-badge">
                 Currently Unavailable
               </div>
             <% } %>
@@ -96,18 +93,18 @@
         </div>
         
         <% if (vehicle.features && vehicle.features.length > 0) { %>
-        <div class="border-t border-gray-200 pt-6">
-          <h3 class="text-lg font-bold mb-2">Features</h3>
-          <ul class="grid grid-cols-2 gap-2">
+        <div class="vehicle-features-section">
+          <h3 class="vehicle-features-title">Features</h3>
+          <div class="vehicle-features-list">
             <% vehicle.features.forEach(feature => { %>
-              <li class="flex items-center">
-                <svg class="h-5 w-5 text-green-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div class="vehicle-feature-item">
+                <svg class="vehicle-feature-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
                 </svg>
-                <span class="text-gray-700"><%= feature %></span>
-              </li>
+                <span class="vehicle-feature-text"><%= feature %></span>
+              </div>
             <% }) %>
-          </ul>
+          </div>
         </div>
         <% } %>
       </div>
@@ -116,16 +113,16 @@
   
   <!-- Reviews Section -->
   <div class="mt-12">
-    <h2 class="text-2xl font-bold mb-6">Customer Reviews</h2>
+    <h2 class="text-2xl font-bold mb-6 dark:text-white">Customer Reviews</h2>
     
     <% if (vehicle.reviews.length === 0) { %>
-      <div class="bg-white rounded-lg shadow-md p-6 text-center">
-        <p class="text-gray-700">There are no reviews yet for this vehicle.</p>
+      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 text-center">
+        <p class="text-gray-700 dark:text-gray-300">There are no reviews yet for this vehicle.</p>
       </div>
     <% } else { %>
       <div class="space-y-6">
         <% vehicle.reviews.forEach(review => { %>
-          <div class="bg-white rounded-lg shadow-md p-6">
+          <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
             <div class="flex justify-between items-start mb-4">
               <div class="flex items-start">
                 <div class="flex-shrink-0">
@@ -134,7 +131,7 @@
                   </div>
                 </div>
                 <div class="ml-4">
-                  <h3 class="text-lg font-bold"><%= review.title %></h3>
+                  <h3 class="text-lg font-bold dark:text-white"><%= review.title %></h3>
                   <div class="flex items-center">
                     <div class="flex items-center">
                       <% for(let i = 1; i <= 5; i++) { %>
@@ -143,15 +140,15 @@
                         </svg>
                       <% } %>
                     </div>
-                    <span class="ml-2 text-sm text-gray-600"><%= review.user.name %></span>
+                    <span class="ml-2 text-sm text-gray-600 dark:text-gray-400"><%= review.user.name %></span>
                   </div>
                 </div>
               </div>
-              <span class="text-sm text-gray-500">
+              <span class="text-sm text-gray-500 dark:text-gray-400">
                 <%= new Date(review.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) %>
               </span>
             </div>
-            <p class="text-gray-700"><%= review.comment %></p>
+            <p class="text-gray-700 dark:text-gray-300"><%= review.comment %></p>
           </div>
         <% }) %>
       </div>
@@ -160,20 +157,20 @@
     <!-- Add Review Form -->
     <% if (user && userHasBooked) { %>
       <div class="mt-8">
-        <h3 class="text-xl font-bold mb-4">Write a Review</h3>
-        <div class="bg-white rounded-lg shadow-md p-6">
+        <h3 class="text-xl font-bold mb-4 dark:text-white">Write a Review</h3>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <form action="/reviews/create" method="POST" class="space-y-4">
             <input type="hidden" name="_csrf" value="<%= csrfToken %>">
             <input type="hidden" name="vehicleId" value="<%= vehicle.id %>">
             
             <div>
-              <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Review Title</label>
-              <input type="text" id="title" name="title" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+              <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Review Title</label>
+              <input type="text" id="title" name="title" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
             </div>
             
             <div>
-              <label for="rating" class="block text-sm font-medium text-gray-700 mb-1">Rating</label>
-              <select id="rating" name="rating" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+              <label for="rating" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Rating</label>
+              <select id="rating" name="rating" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white">
                 <option value="">Select Rating</option>
                 <option value="5">5 - Excellent</option>
                 <option value="4">4 - Very Good</option>
@@ -184,8 +181,8 @@
             </div>
             
             <div>
-              <label for="comment" class="block text-sm font-medium text-gray-700 mb-1">Your Review</label>
-              <textarea id="comment" name="comment" rows="4" required class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"></textarea>
+              <label for="comment" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Your Review</label>
+              <textarea id="comment" name="comment" rows="4" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"></textarea>
             </div>
             
             <div>
@@ -197,8 +194,8 @@
         </div>
       </div>
     <% } else if (user) { %>
-      <div class="mt-8 bg-blue-50 rounded-lg p-6 text-center">
-        <p class="text-gray-700">You need to rent this vehicle before you can leave a review.</p>
+      <div class="mt-8 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-6 text-center">
+        <p class="text-gray-700 dark:text-gray-300">You need to rent this vehicle before you can leave a review.</p>
       </div>
     <% } %>
   </div>

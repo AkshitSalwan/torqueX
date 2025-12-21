@@ -213,6 +213,27 @@ exports.getDashboard = async (req, res) => {
     // Combine pending and confirmed for "active" bookings
     const activeBookingsCount = pendingBookingsCount + confirmedBookingsCount;
 
+    // Get today's bookings count (bookings starting today)
+    let todayBookingsCount = 0;
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      todayBookingsCount = await req.prisma.booking.count({
+        where: {
+          startDate: {
+            gte: today,
+            lt: tomorrow
+          }
+        }
+      });
+      console.log('Today bookings:', todayBookingsCount);
+    } catch (error) {
+      console.error('Error fetching today bookings:', error.message);
+    }
+
     // Get Redis status safely
     const redisClient = getRedisClient();
     let redisStatus = {
@@ -265,7 +286,7 @@ exports.getDashboard = async (req, res) => {
       console.error('Redis status check error:', error.message);
     }
 
-    // Format the dashboard data
+    // Format the dashboard data with nested structure matching the EJS template
     const dashboardData = {
       title: 'Admin Dashboard',
       stats: {
@@ -278,6 +299,18 @@ exports.getDashboard = async (req, res) => {
         confirmedBookings: confirmedBookingsCount,
         completedBookings: completedBookingsCount,
         cancelledBookings: cancelledBookingsCount,
+        // Nested booking stats for EJS template
+        bookingStats: {
+          active: activeBookingsCount,
+          today: todayBookingsCount,
+          totalRevenue: totalRevenue && totalRevenue._sum ? totalRevenue._sum.totalPrice || 0 : 0
+        },
+        // Nested user stats for EJS template
+        userStats: {
+          total: userCount,
+          active: userCount // Assuming all users are active for now
+        },
+        // Vehicle stats with nested structure
         vehicleStats: {
           total: vehicleCount,
           available: vehicleCount || 0,
@@ -576,7 +609,7 @@ exports.getVehicleDetailAdmin = async (req, res) => {
             user: true
           },
           orderBy: {
-            createdAt: 'desc'
+            startDate: 'desc'
           }
         },
         reviews: {

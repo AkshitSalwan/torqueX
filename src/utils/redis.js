@@ -14,6 +14,12 @@ let isConnected = false;
  * Initialize Redis client
  */
 const initRedis = async () => {
+  // Skip Redis if not configured
+  if (!process.env.REDIS_HOST) {
+    logger.info('Redis: Skipping initialization (REDIS_HOST not configured)');
+    return null;
+  }
+  
   // Return existing client if already initialized
   if (redisClient && isConnected) {
     logger.info('Redis: Using existing connection');
@@ -24,9 +30,9 @@ const initRedis = async () => {
     // Create Redis client with credentials
     redisClient = createClient({
       username: process.env.REDIS_USERNAME || 'default',
-      password: process.env.REDIS_PASSWORD || 'EId72MQTIPP7KGw9Ur3rkSBQR2AIqNEw',
+      password: process.env.REDIS_PASSWORD,
       socket: {
-        host: process.env.REDIS_HOST || 'redis-11311.c52.us-east-1-4.ec2.redns.redis-cloud.com',
+        host: process.env.REDIS_HOST,
         port: parseInt(process.env.REDIS_PORT || '11311'),
         reconnectStrategy: (retries) => {
           if (retries > 10) {

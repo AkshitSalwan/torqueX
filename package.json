@@ -7,6 +7,7 @@
     "start:no-clerk": "SKIP_CLERK=true node ./bin/www",
     "dev": "nodemon ./bin/www",
     "dev:no-clerk": "SKIP_CLERK=true nodemon ./bin/www",
+    "generate-cert": "bash ./scripts/generate-ssl-cert.sh",
     "build:css": "npx tailwindcss -i ./public/stylesheets/tailwind.css -o ./public/stylesheets/style.css --watch",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",

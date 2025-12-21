@@ -1,8 +1,8 @@
 <%- include('../partials/header') %>
 
 <div class="container mx-auto px-4 py-12">
-  <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-md p-8">
-    <h1 class="text-3xl font-bold mb-6"><%= review ? 'Edit Review' : 'Leave a Review' %></h1>
+  <div class="max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-lg shadow-md p-8">
+    <h1 class="text-3xl font-bold mb-6 dark:text-white"><%= review ? 'Edit Review' : 'Leave a Review' %></h1>
     
     <div class="mb-8">
       <div class="flex items-center">
@@ -15,10 +15,10 @@
           >
         </div>
         <div class="ml-4">
-          <div class="text-lg font-bold text-gray-900">
+          <div class="text-lg font-bold text-gray-900 dark:text-white">
             <%= vehicle.make %> <%= vehicle.model %> <%= vehicle.year %>
           </div>
-          <div class="text-sm text-gray-500">
+          <div class="text-sm text-gray-500 dark:text-gray-400">
             Booking dates: <%= new Date(booking.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) %> - <%= new Date(booking.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) %>
           </div>
         </div>
@@ -30,19 +30,19 @@
       <input type="hidden" name="bookingId" value="<%= booking.id %>">
       
       <div>
-        <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Review Title</label>
+        <label for="title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Review Title</label>
         <input 
           type="text" 
           id="title" 
           name="title" 
           value="<%= review ? review.title : '' %>" 
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
           required
         >
       </div>
       
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Rating</label>
         <div class="flex space-x-2">
           <% for(let i = 1; i <= 5; i++) { %>
             <div class="flex items-center">
@@ -51,10 +51,10 @@
                 id="rating<%= i %>" 
                 name="rating" 
                 value="<%= i %>" 
-                class="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
+                class="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 dark:border-gray-600"
                 <%= (review && review.rating === i) || (!review && i === 5) ? 'checked' : '' %>
               >
-              <label for="rating<%= i %>" class="text-gray-700 text-sm">
+              <label for="rating<%= i %>" class="text-gray-700 dark:text-gray-300 text-sm">
                 <%= i %> <%= i === 1 ? 'Star' : 'Stars' %>
               </label>
             </div>
@@ -63,18 +63,18 @@
       </div>
       
       <div>
-        <label for="comment" class="block text-sm font-medium text-gray-700 mb-1">Review Comments</label>
+        <label for="comment" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Review Comments</label>
         <textarea 
           id="comment" 
           name="comment" 
           rows="5" 
-          class="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+          class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
           required
         ><%= review ? review.comment : '' %></textarea>
       </div>
       
       <div class="flex justify-between pt-4">
-        <a href="/user/bookings" class="inline-block bg-gray-200 text-gray-800 py-2 px-6 rounded-lg hover:bg-gray-300 transition duration-300">
+        <a href="/user/bookings" class="inline-block bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 py-2 px-6 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition duration-300">
           Cancel
         </a>
         <button type="submit" class="inline-block bg-blue-600 text-white py-2 px-6 rounded-lg hover:bg-blue-700 transition duration-300">

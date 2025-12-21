@@ -61,6 +61,7 @@ router.post('/cache-clear', adminController.clearCache);
 // Vehicle management
 router.get('/vehicles', adminController.getVehiclesAdmin);
 router.get('/vehicles/new', adminController.getVehicleForm);
+router.get('/vehicles/:id/edit', adminController.getVehicleForm);
 router.get('/vehicles/:id', adminController.getVehicleDetailAdmin);
 router.post('/vehicles', upload.single('image'), securityMiddleware.deferredCsrfValidation, adminController.createVehicle);
 router.put('/vehicles/:id', upload.single('image'), securityMiddleware.deferredCsrfValidation, adminController.updateVehicle);
@@ -79,15 +80,13 @@ router.post('/broadcasts', adminController.createBroadcast);
 router.get('/vehicle-requests', adminController.getVehicleRequests);
 router.put('/vehicle-requests/:id/status', adminController.updateVehicleRequestStatus);
 
-// Deal management
-router.get('/deals', adminController.getDealsAdmin);
-router.get('/deals/new', adminController.getNewDealForm);
-router.get('/deals/:id/edit', adminController.getEditDealForm);
-router.post('/deals', express.json(), adminController.createDeal);
-// Use method-override for PUT and DELETE
-router.post('/deals/:id', express.json(), adminController.updateDeal); // Method-override will convert to PUT
-// Also add direct routes for API calls
-router.put('/deals/:id', express.json(), adminController.updateDeal);
-router.delete('/deals/:id', adminController.deleteDeal);
+// Deal management - DISABLED (no functionality)
+// router.get('/deals', adminController.getDealsAdmin);
+// router.get('/deals/new', adminController.getNewDealForm);
+// router.get('/deals/:id/edit', adminController.getEditDealForm);
+// router.post('/deals', express.json(), adminController.createDeal);
+// router.post('/deals/:id', express.json(), adminController.updateDeal);
+// router.put('/deals/:id', express.json(), adminController.updateDeal);
+// router.delete('/deals/:id', adminController.deleteDeal);
 
 module.exports = router;

@@ -6,6 +6,11 @@
   <title><%= title %> - TorqueX Admin</title>
   <link rel="stylesheet" href="/stylesheets/style.css">
   <style>
+    body {
+      background: #111827;
+      color: #f3f4f6;
+    }
+    
     .cache-viewer {
       max-width: 1400px;
       margin: 0 auto;
@@ -18,7 +23,7 @@
       align-items: center;
       margin-bottom: 30px;
       padding-bottom: 20px;
-      border-bottom: 2px solid #e5e7eb;
+      border-bottom: 2px solid #374151;
     }
     
     .cache-stats {
@@ -28,22 +33,22 @@
     }
     
     .stat-card {
-      background: white;
+      background: #1f2937;
       padding: 15px 25px;
       border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
     }
     
     .stat-label {
       font-size: 0.875rem;
-      color: #6b7280;
+      color: #9ca3af;
       margin-bottom: 5px;
     }
     
     .stat-value {
       font-size: 1.5rem;
       font-weight: bold;
-      color: #111827;
+      color: #f3f4f6;
     }
     
     .cache-controls {
@@ -55,7 +60,9 @@
     .cache-controls input {
       flex: 1;
       padding: 10px 15px;
-      border: 1px solid #d1d5db;
+      border: 1px solid #4b5563;
+      background: #374151;
+      color: #f3f4f6;
       border-radius: 6px;
       font-size: 0.875rem;
     }
@@ -85,9 +92,9 @@
     }
     
     .cache-table {
-      background: white;
+      background: #1f2937;
       border-radius: 8px;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
       overflow: hidden;
     }
     
@@ -97,21 +104,22 @@
     }
     
     .cache-table th {
-      background: #f9fafb;
+      background: #374151;
       padding: 12px 15px;
       text-align: left;
       font-size: 0.75rem;
       font-weight: 600;
-      color: #6b7280;
+      color: #9ca3af;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid #4b5563;
     }
     
     .cache-table td {
       padding: 12px 15px;
-      border-bottom: 1px solid #e5e7eb;
+      border-bottom: 1px solid #374151;
       font-size: 0.875rem;
+      color: #f3f4f6;
     }
     
     .cache-table tr:last-child td {
@@ -119,7 +127,7 @@
     }
     
     .cache-table tbody tr:hover {
-      background: #f9fafb;
+      background: #374151;
     }
     
     .cache-key {
@@ -149,13 +157,14 @@
       max-width: 500px;
       max-height: 200px;
       overflow: auto;
-      background: #f9fafb;
+      background: #374151;
       padding: 8px;
       border-radius: 4px;
       font-family: 'Courier New', monospace;
       font-size: 0.75rem;
       white-space: pre-wrap;
       word-break: break-all;
+      color: #f3f4f6;
     }
     
     .cache-actions {
@@ -189,7 +198,7 @@
     .empty-state {
       text-align: center;
       padding: 60px 20px;
-      color: #6b7280;
+      color: #9ca3af;
     }
     
     .empty-state svg {
@@ -220,8 +229,8 @@
     
     <div class="cache-header">
       <div>
-        <h1 style="margin: 0 0 5px 0; color: #111827;">Redis Cache Viewer</h1>
-        <p style="margin: 0; color: #6b7280;">View and manage all cached data</p>
+        <h1 style="margin: 0 0 5px 0; color: #f3f4f6;">Redis Cache Viewer</h1>
+        <p style="margin: 0; color: #9ca3af;">View and manage all cached data</p>
       </div>
     </div>
     
@@ -234,30 +243,30 @@
     <% if (!error) { %>
       <!-- Cache Population Guide -->
       <% if (!keys || keys.length === 0) { %>
-        <div style="background: #eff6ff; border: 1px solid #3b82f6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
-          <h3 style="margin: 0 0 15px 0; color: #1e40af; font-size: 1rem;">📦 Cache is Empty - Follow These Steps:</h3>
+        <div style="background: #1e3a8a; border: 1px solid #3b82f6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+          <h3 style="margin: 0 0 15px 0; color: #93c5fd; font-size: 1rem;">📦 Cache is Empty - Follow These Steps:</h3>
           
-          <div style="background: white; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
-            <p style="margin: 0 0 10px 0; color: #1e40af; font-weight: 600;">Step 1: Add a Vehicle</p>
-            <p style="margin: 0 0 10px 0; color: #1e40af; font-size: 0.875rem;">Go to <a href="/admin/vehicles/new" style="color: #2563eb; text-decoration: underline;">Add Vehicle</a> and create a new vehicle</p>
+          <div style="background: #1f2937; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
+            <p style="margin: 0 0 10px 0; color: #93c5fd; font-weight: 600;">Step 1: Add a Vehicle</p>
+            <p style="margin: 0 0 10px 0; color: #93c5fd; font-size: 0.875rem;">Go to <a href="/admin/vehicles/new" style="color: #60a5fa; text-decoration: underline;">Add Vehicle</a> and create a new vehicle</p>
           </div>
           
-          <div style="background: white; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
-            <p style="margin: 0 0 10px 0; color: #1e40af; font-weight: 600;">Step 2: View Vehicles</p>
-            <p style="margin: 0 0 10px 0; color: #1e40af; font-size: 0.875rem;">Visit <a href="/" style="color: #2563eb; text-decoration: underline;">Homepage</a> - This caches <code style="background: #f3f4f6; padding: 2px 6px; border-radius: 3px;">vehicles:list:*</code></p>
+          <div style="background: #1f2937; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
+            <p style="margin: 0 0 10px 0; color: #93c5fd; font-weight: 600;">Step 2: View Vehicles</p>
+            <p style="margin: 0 0 10px 0; color: #93c5fd; font-size: 0.875rem;">Visit <a href="/" style="color: #60a5fa; text-decoration: underline;">Homepage</a> - This caches <code style="background: #374151; padding: 2px 6px; border-radius: 3px; color: #f3f4f6;">vehicles:list:*</code></p>
           </div>
           
-          <div style="background: white; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
-            <p style="margin: 0 0 10px 0; color: #1e40af; font-weight: 600;">Step 3: View Broadcasts</p>
-            <p style="margin: 0 0 10px 0; color: #1e40af; font-size: 0.875rem;">Visit <a href="/admin/broadcasts" style="color: #2563eb; text-decoration: underline;">Broadcasts</a> - This caches <code style="background: #f3f4f6; padding: 2px 6px; border-radius: 3px;">broadcasts:all</code></p>
+          <div style="background: #1f2937; border-radius: 6px; padding: 15px; margin-bottom: 15px;">
+            <p style="margin: 0 0 10px 0; color: #93c5fd; font-weight: 600;">Step 3: View Broadcasts</p>
+            <p style="margin: 0 0 10px 0; color: #93c5fd; font-size: 0.875rem;">Visit <a href="/admin/broadcasts" style="color: #60a5fa; text-decoration: underline;">Broadcasts</a> - This caches <code style="background: #374151; padding: 2px 6px; border-radius: 3px; color: #f3f4f6;">broadcasts:all</code></p>
           </div>
           
-          <div style="background: white; border-radius: 6px; padding: 15px;">
-            <p style="margin: 0 0 10px 0; color: #1e40af; font-weight: 600;">Step 4: Refresh This Page</p>
-            <p style="margin: 0; color: #1e40af; font-size: 0.875rem;">Click the "Refresh" button below to see cached data appear</p>
+          <div style="background: #1f2937; border-radius: 6px; padding: 15px;">
+            <p style="margin: 0 0 10px 0; color: #93c5fd; font-weight: 600;">Step 4: Refresh This Page</p>
+            <p style="margin: 0; color: #93c5fd; font-size: 0.875rem;">Click the "Refresh" button below to see cached data appear</p>
           </div>
           
-          <p style="margin: 15px 0 0 0; color: #1e40af; font-size: 0.875rem; text-align: center;"><strong>💡 Tip:</strong> Cache expires after 2-5 minutes, then data is fetched fresh from database</p>
+          <p style="margin: 15px 0 0 0; color: #93c5fd; font-size: 0.875rem; text-align: center;"><strong>💡 Tip:</strong> Cache expires after 2-5 minutes, then data is fetched fresh from database</p>
         </div>
       <% } %>
       
