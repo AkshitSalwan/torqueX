@@ -1,4 +1,7 @@
 module.exports = {
+  // Root directory for Jest
+  rootDir: '../..',
+  
   // Test environment
   testEnvironment: 'node',
 

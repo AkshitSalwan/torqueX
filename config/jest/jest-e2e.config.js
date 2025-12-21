@@ -2,12 +2,15 @@ const fs = require('fs');
 const path = require('path');
 
 // Ensure screenshots directory exists
-const screenshotsDir = path.join(__dirname, 'screenshots');
+const screenshotsDir = path.join(__dirname, '../../screenshots');
 if (!fs.existsSync(screenshotsDir)) {
   fs.mkdirSync(screenshotsDir, { recursive: true });
 }
 
 module.exports = {
+  // Root directory for Jest
+  rootDir: '../..',
+  
   // Use Puppeteer preset for E2E tests
   preset: 'jest-puppeteer',
 
