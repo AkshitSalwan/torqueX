@@ -43,7 +43,7 @@ const upload = multer({
 });
 
 // Apply middleware to all routes
-router.use(requireAuth, requireAdmin);
+router.use(requireAuth, requireAdmin, securityMiddleware.csrfProtection);
 
 // Admin dashboard
 router.get('/dashboard', adminController.getDashboard);

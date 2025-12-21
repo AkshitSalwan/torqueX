@@ -1,16 +1,23 @@
 module.exports = {
   launch: {
     headless: process.env.HEADLESS !== 'false',
-    slowMo: process.env.HEADLESS === 'false' ? 500 : 0,
+    slowMo: process.env.HEADLESS === 'false' ? 1500 : 0,
     devtools: process.env.HEADLESS === 'false',
     args: [
       '--window-size=1280,800',
+      '--window-position=100,100',
       '--no-sandbox',
       '--disable-setuid-sandbox',
-      '--disable-web-security', // Allow CORS for testing
-      '--disable-features=IsolateOrigins,site-per-process'
+      '--disable-web-security',
+      '--disable-features=IsolateOrigins,site-per-process',
+      '--disable-dev-shm-usage'
     ],
-    defaultViewport: null
+    defaultViewport: {
+      width: 1280,
+      height: 800
+    },
+    // Keep browser open for manual inspection
+    dumpio: process.env.HEADLESS === 'false'
   },
   browserContext: 'default',
   // Only start server if testing locally (no BASE_URL provided)

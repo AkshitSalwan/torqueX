@@ -321,16 +321,24 @@
 
   async function clearCachePattern(pattern) {
     try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
       const response = await fetch('/admin/cache-clear', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': csrfToken
+        },
         body: JSON.stringify({ pattern })
       });
       
       const data = await response.json();
       const resultEl = document.getElementById('operation-result');
       
-      if (data.success) {
+      if (response.status === 403) {
+        resultEl.className = 'mt-4 p-3 bg-red-100 border-l-4 border-red-500 text-red-700 rounded';
+        resultEl.textContent = 'CSRF token validation failed. Please refresh the page and try again.';
+        setTimeout(() => window.location.reload(), 2000);
+      } else if (data.success) {
         resultEl.className = 'mt-4 p-3 bg-green-100 border-l-4 border-green-500 text-green-700 rounded';
         resultEl.textContent = data.message;
       } else {
