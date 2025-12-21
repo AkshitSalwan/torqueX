@@ -37,6 +37,9 @@ const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 const app = express();
 
+// Trust proxy - required for Railway/Heroku/other proxies
+app.set('trust proxy', 1);
+
 // view engine setup
 app.set('views', path.join(__dirname, 'src/views'));
 app.set('view engine', 'ejs');
@@ -74,7 +77,7 @@ const sessionConfig = {
   cookie: { 
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'strict',
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
 };
