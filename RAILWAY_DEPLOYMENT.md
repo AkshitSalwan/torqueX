@@ -1,23 +1,27 @@
-# 🚂 Railway Deployment Guide for TorqueX
+# 🚂 Railway + Neon Deployment Guide for TorqueX
 
 ## Quick Deploy (5 minutes)
 
-### Step 1: Sign up for Railway
+### Step 1: Create Neon Database (Free)
+1. Go to https://neon.tech
+2. Click "Sign Up" → Sign in with GitHub
+3. Click "Create Project"
+4. Name: `torquex-db`
+5. Region: Choose closest to you
+6. Click "Create Project"
+7. **Copy the connection string** (starts with `postgresql://`)
+   - It looks like: `postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require`
+
+### Step 2: Sign up for Railway
 1. Go to https://railway.app
 2. Click "Login" → Sign in with GitHub
 3. Authorize Railway to access your GitHub account
 
-### Step 2: Create New Project
+### Step 3: Create New Project
 1. Click "New Project"
 2. Select "Deploy from GitHub repo"
 3. Choose your repository: **AkshitSalwan/torqueX**
 4. Click "Deploy Now"
-
-### Step 3: Add PostgreSQL Database
-1. In your project dashboard, click "+ New"
-2. Select "Database" → "Add PostgreSQL"
-3. Railway will automatically create and link the database
-4. It will auto-set the `DATABASE_URL` environment variable
 
 ### Step 4: Add Redis
 1. Click "+ New" again
@@ -25,29 +29,26 @@
 3. Railway will auto-configure and set `REDIS_URL`
 
 ### Step 5: Configure Environment Variables
-Click on your web service → "Variables" tab → Add these variables:
+Click on your web service → "Variables" tab → "Raw Editor" → Paste these variables:
 
 ```env
 # Required Variables
 NODE_ENV=production
-PORT=3000
-SESSION_SECRET=your-super-secret-session-key-change-this-in-production
+SKIP_CLERK=true
+
+# Session Secret (already generated for you)
+SESSION_SECRET=e81bf7507bcf63e273706062b27518f36c31768cb6d31279331a013b55fb55606eb8053882dd4207b3c6c939ce2ffa7e2a2627ec378261a4220f6316280dc5ee
 
 # Encryption Key (MUST be 64 hex characters - 32 bytes)
 ENCRYPTION_KEY=7f6f9536770614df353188e6f136bb27484873290f71bdd683b69cc65588016c
 
-# Optional - Clerk Authentication (if using)
-CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-CLERK_SECRET_KEY=your_clerk_secret_key
-SKIP_CLERK=true
+# Neon Database URL (paste your connection string from Step 1)
+DATABASE_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require
 
-# Optional - Stripe Payments (if using)
-STRIPE_SECRET_KEY=your_stripe_secret_key
-
-# The following are automatically set by Railway:
-# DATABASE_URL (from PostgreSQL service)
-# REDIS_URL (from Redis service)
+# REDIS_URL is automatically set by Railway Redis service
 ```
+
+**Important:** Replace the DATABASE_URL with your actual Neon connection string!
 
 ### Step 6: Generate New Session Secret
 Run this command locally to generate a secure session secret:
@@ -101,13 +102,13 @@ Or manually create via Prisma Studio:
 | `DATABASE_URL` | ✅ Auto | PostgreSQL connection | Auto-set by Railway |
 | `REDIS_URL` | ✅ Auto | Redis connection | Auto-set by Railway |
 | `NODE_ENV` | ✅ | Environment | `production` |
+| `PORT` | ✅ Auto | S| Neon PostgreSQL connection | From Neon dashboard |
+| `REDIS_URL` | ✅ Auto | Redis connection | Auto-set by Railway |
+| `NODE_ENV` | ✅ | Environment | `production` |
 | `PORT` | ✅ Auto | Server port | Auto-set by Railway |
-| `SESSION_SECRET` | ✅ | Session encryption | Generate with crypto |
-| `ENCRYPTION_KEY` | ✅ | Data encryption (32 bytes hex) | 64 hex characters |
-| `SKIP_CLERK` | ⚠️ | Disable Clerk auth | `true` |
-| `CLERK_PUBLISHABLE_KEY` | ⬜ | Clerk public key | Optional |
-| `CLERK_SECRET_KEY` | ⬜ | Clerk secret | Optional |
-| `STRIPE_SECRET_KEY` | ⬜ | Stripe payments | Optional |
+| `SESSION_SECRET` | ✅ | Session encryption | Already generated |
+| `ENCRYPTION_KEY` | ✅ | Data encryption (32 bytes hex) | Already provided |
+| `SKIP_CLERK` | ✅Y` | ⬜ | Stripe payments | Optional |
 
 ---
 
@@ -143,8 +144,9 @@ In Railway dashboard:
 - Verify all dependencies are in `dependencies` not `devDependencies`
 
 ### Database Connection Error
-- Verify `DATABASE_URL` is set correctly
-- Check PostgreSQL service is running
+- Verify `DATABASE_URL` is set correctly (from Neon)
+- Ensure connection string includes `?sslmode=require`
+- Check Neon project is not suspended (free tier sleeps after inactivity)
 - Run migrations: `railway run npx prisma migrate deploy`
 
 ### Redis Connection Error
@@ -160,14 +162,18 @@ In Railway dashboard:
 ---
 
 ## Estimated Costs
+Neon Database:**
+- ✅ **FREE FOREVER** (0.5 GB storage, 3 GB transfer)
+- Scales automatically
+- No credit card required
 
-**Railway Pricing:**
+**Railway Hosting:**
 - Free Trial: $5 credit (enough for ~1 month of testing)
-- After trial: ~$5-10/month for small app
+- After trial: ~$3-5/month
   - Web Service: ~$2/month
-  - PostgreSQL: ~$2/month
-  - Redis: ~$1/month
+  - Redis: ~$1-2/month
 
+**Total: ~$3-5/month** (Database is FREE!)
 **Total: ~$5/month** for production hosting with databases included.
 
 ---
